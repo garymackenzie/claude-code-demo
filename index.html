@@ -715,8 +715,8 @@
             <i class="tip" data-tip="V1: iSCSI-based, user-space replication (default). V2: SPDK with NVMe passthrough — lower latency, higher IOPS, requires NVMe disks + extra CPU/RAM.">?</i>
           </label>
           <div class="btn-group" id="engine-grp">
-            <button class="active" onclick="activateBtn('engine-grp', this); state.engine='V1'; recalc()">V1 (default)</button>
-            <button onclick="activateBtn('engine-grp', this); state.engine='V2'; recalc()">V2 (NVMe/SPDK)</button>
+            <button class="active" onclick="activateBtn('engine-grp', this); S.engine='V1'; recalc()">V1 (default)</button>
+            <button onclick="activateBtn('engine-grp', this); S.engine='V2'; recalc()">V2 (NVMe/SPDK)</button>
           </div>
         </div>
 
@@ -802,9 +802,9 @@
             <i class="tip" data-tip="3 = default HA (tolerates 2 disk failures). 2 = recommended balance of HA and performance. 1 = no redundancy, fastest writes, data loss on disk failure.">?</i>
           </label>
           <div class="btn-group" id="replica-grp">
-            <button onclick="activateBtn('replica-grp', this); state.replicas=1; recalc()">1 — No HA</button>
-            <button onclick="activateBtn('replica-grp', this); state.replicas=2; recalc()">2 — Recommended</button>
-            <button class="active" onclick="activateBtn('replica-grp', this); state.replicas=3; recalc()">3 — Default</button>
+            <button onclick="activateBtn('replica-grp', this); S.replicas=1; recalc()">1 — No HA</button>
+            <button onclick="activateBtn('replica-grp', this); S.replicas=2; recalc()">2 — Recommended</button>
+            <button class="active" onclick="activateBtn('replica-grp', this); S.replicas=3; recalc()">3 — Default</button>
           </div>
         </div>
 
@@ -872,9 +872,9 @@
             <i class="tip" data-tip="Random: database workloads — IOPS-bound. Sequential: backups, streaming, analytics — throughput-bound. Mixed: 50/50 weighted average.">?</i>
           </label>
           <div class="btn-group" id="pattern-grp">
-            <button class="active" onclick="activateBtn('pattern-grp', this); state.pattern='random'; recalc()">Random</button>
-            <button onclick="activateBtn('pattern-grp', this); state.pattern='sequential'; recalc()">Sequential</button>
-            <button onclick="activateBtn('pattern-grp', this); state.pattern='mixed'; recalc()">Mixed</button>
+            <button class="active" onclick="activateBtn('pattern-grp', this); S.pattern='random'; recalc()">Random</button>
+            <button onclick="activateBtn('pattern-grp', this); S.pattern='sequential'; recalc()">Sequential</button>
+            <button onclick="activateBtn('pattern-grp', this); S.pattern='mixed'; recalc()">Mixed</button>
           </div>
         </div>
 
@@ -1324,9 +1324,12 @@ function calculate(s) {
   const rCeilScale = rMult / p.rMult3;                     // 1r≈0.23×, 2r≈0.75×, 3r=1.0×
   const wCeilScale = s.replicas === 1 ? p.wMult1 / p.wMult : 1.0; // 1r≈2.52×, 2/3r=1.0×
 
-  // IOPS ceilings: scale by hardware, node count, and replica efficiency
-  const rIopsCeil = p.rCeil * hwScale * nodeScale * rCeilScale;
-  const wIopsCeil = p.wCeil * hwScale * nodeScale * wCeilScale;
+  // V2 engine multiplier — applied to both per-volume demand and cluster ceilings
+  const engMult = s.engine === 'V2' ? V2.iopsMult : 1.0;
+
+  // IOPS ceilings: scale by hardware, node count, replica efficiency, and engine
+  const rIopsCeil = p.rCeil * hwScale * nodeScale * rCeilScale * engMult;
+  const wIopsCeil = p.wCeil * hwScale * nodeScale * wCeilScale * engMult;
 
   // Bandwidth ceilings (disk aggregate vs network)
   const netMbps    = s.networkGbps * 125;
@@ -1344,9 +1347,6 @@ function calculate(s) {
   // Effective cluster-level ceilings (min of IOPS and BW limits)
   const effRCeil = Math.min(rIopsCeil, rBwAsIops);
   const effWCeil = Math.min(wIopsCeil, wBwAsIops);
-
-  // V2 engine multiplier
-  const engMult = s.engine === 'V2' ? V2.iopsMult : 1.0;
 
   // Unconstrained per-volume IOPS (single vol, no contention)
   const rawRIopsVol = nodeIops * rMult * locBoost * bf.iops * engMult;
