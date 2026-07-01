@@ -1,0 +1,1439 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SUSE Longhorn Storage Sizing Calculator</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:          #0d1520;
+      --bg-card:     #162030;
+      --bg-input:    #0d1520;
+      --bg-hover:    #1a2a40;
+      --accent:      #30ba78;
+      --accent-mid:  #25935f;
+      --accent-glow: rgba(48,186,120,0.12);
+      --text:        #dde6f0;
+      --text-muted:  #6a8096;
+      --border:      #1e3048;
+      --border-hi:   #2a4260;
+      --warn:        #f59e0b;
+      --danger:      #ef4444;
+      --info:        #60a5fa;
+      --radius:      10px;
+    }
+
+    body {
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    /* ── Header ─────────────────────────────────────── */
+    header {
+      background: linear-gradient(135deg, #162030 0%, #0d1520 100%);
+      border-bottom: 1px solid var(--border);
+      padding: 0 24px;
+      height: 60px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .brand-mark {
+      width: 34px;
+      height: 34px;
+      background: linear-gradient(135deg, var(--accent) 0%, var(--accent-mid) 100%);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 14px;
+      color: #000;
+      letter-spacing: -0.5px;
+      flex-shrink: 0;
+    }
+
+    .brand-text h1 {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .brand-text p {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 1px;
+    }
+
+    .header-badge {
+      font-size: 11px;
+      color: var(--text-muted);
+      background: var(--bg-card);
+      padding: 4px 10px;
+      border-radius: 20px;
+      border: 1px solid var(--border);
+    }
+
+    /* ── Layout ─────────────────────────────────────── */
+    main {
+      display: grid;
+      grid-template-columns: 390px 1fr;
+      min-height: calc(100vh - 60px);
+    }
+
+    @media (max-width: 960px) {
+      main { grid-template-columns: 1fr; }
+      .results-panel { border-top: 1px solid var(--border); }
+    }
+
+    .input-panel {
+      border-right: 1px solid var(--border);
+      overflow-y: auto;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .results-panel {
+      padding: 20px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    /* ── Cards ───────────────────────────────────────── */
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+
+    .card-header {
+      padding: 11px 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      cursor: pointer;
+      user-select: none;
+      transition: background 0.15s;
+    }
+
+    .card-header:hover { background: var(--bg-hover); }
+
+    .card-header.open { border-bottom: 1px solid var(--border); }
+
+    .card-title {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .card-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--accent);
+      flex-shrink: 0;
+    }
+
+    .card-chev {
+      color: var(--text-muted);
+      font-size: 10px;
+      transition: transform 0.2s;
+    }
+    .card-chev.open { transform: rotate(180deg); }
+
+    .card-body {
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    /* ── Form controls ───────────────────────────────── */
+    .field { display: flex; flex-direction: column; gap: 5px; }
+
+    .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+
+    label {
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .tip {
+      width: 13px;
+      height: 13px;
+      border-radius: 50%;
+      background: var(--border-hi);
+      color: var(--text-muted);
+      font-size: 8px;
+      font-style: normal;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      cursor: help;
+      flex-shrink: 0;
+      position: relative;
+    }
+
+    .tip::after {
+      content: attr(data-tip);
+      position: absolute;
+      left: 18px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: #1e3048;
+      border: 1px solid var(--border-hi);
+      color: var(--text);
+      font-size: 11px;
+      font-weight: 400;
+      padding: 6px 10px;
+      border-radius: 6px;
+      white-space: normal;
+      width: 220px;
+      line-height: 1.4;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.15s;
+      z-index: 200;
+    }
+
+    .tip:hover::after { opacity: 1; }
+
+    input[type="number"], select {
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text);
+      padding: 7px 10px;
+      font-size: 12px;
+      font-family: inherit;
+      width: 100%;
+      outline: none;
+      transition: border-color 0.15s;
+      -moz-appearance: textfield;
+    }
+
+    input[type="number"]::-webkit-outer-spin-button,
+    input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; }
+
+    input[type="number"]:focus, select:focus { border-color: var(--accent); }
+
+    select { cursor: pointer; }
+
+    /* Slider */
+    .slider-row { display: flex; align-items: center; gap: 10px; }
+
+    input[type="range"] {
+      flex: 1;
+      -webkit-appearance: none;
+      height: 3px;
+      background: var(--border-hi);
+      border-radius: 2px;
+      outline: none;
+      cursor: pointer;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 15px;
+      height: 15px;
+      border-radius: 50%;
+      background: var(--accent);
+      cursor: pointer;
+      box-shadow: 0 0 0 3px var(--accent-glow);
+      transition: box-shadow 0.15s;
+    }
+
+    input[type="range"]::-webkit-slider-thumb:hover {
+      box-shadow: 0 0 0 6px var(--accent-glow);
+    }
+
+    .slider-val {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--accent);
+      min-width: 36px;
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* Button group */
+    .btn-group {
+      display: flex;
+      border-radius: 6px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+    }
+
+    .btn-group button {
+      flex: 1;
+      padding: 7px 4px;
+      background: var(--bg-input);
+      border: none;
+      border-right: 1px solid var(--border);
+      color: var(--text-muted);
+      font-size: 11px;
+      font-weight: 500;
+      cursor: pointer;
+      font-family: inherit;
+      transition: all 0.12s;
+    }
+
+    .btn-group button:last-child { border-right: none; }
+
+    .btn-group button.active {
+      background: var(--accent);
+      color: #000;
+      font-weight: 700;
+    }
+
+    .btn-group button:hover:not(.active) {
+      background: var(--bg-hover);
+      color: var(--text);
+    }
+
+    /* ── Results ─────────────────────────────────────── */
+    .hero-row {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+    }
+
+    .hero-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px 14px;
+      text-align: center;
+    }
+
+    .hero-label {
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+    }
+
+    .hero-val {
+      font-size: 26px;
+      font-weight: 700;
+      color: var(--accent);
+      font-variant-numeric: tabular-nums;
+      line-height: 1;
+    }
+
+    .hero-sub {
+      font-size: 10px;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    @media (max-width: 1200px) {
+      .metrics-grid { grid-template-columns: 1fr; }
+    }
+
+    .metric-block {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 14px 16px;
+    }
+
+    .block-title {
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-muted);
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+    }
+
+    .block-title::before {
+      content: '';
+      display: block;
+      width: 3px;
+      height: 11px;
+      background: var(--accent);
+      border-radius: 2px;
+      flex-shrink: 0;
+    }
+
+    .metric {
+      margin-bottom: 10px;
+    }
+
+    .metric:last-child { margin-bottom: 0; }
+
+    .metric-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      margin-bottom: 4px;
+    }
+
+    .metric-name { font-size: 12px; color: var(--text-muted); }
+
+    .metric-num {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--text);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .metric-unit {
+      font-size: 10px;
+      color: var(--text-muted);
+      font-weight: 400;
+      margin-left: 2px;
+    }
+
+    .gauge {
+      height: 3px;
+      background: var(--border-hi);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+
+    .gauge-bar {
+      height: 100%;
+      border-radius: 2px;
+      transition: width 0.3s ease, background-color 0.3s;
+    }
+
+    .g-green { background: var(--accent); }
+    .g-amber { background: var(--warn); }
+    .g-red   { background: var(--danger); }
+
+    .divider {
+      height: 1px;
+      background: var(--border);
+      margin: 10px 0;
+    }
+
+    .sub-note {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 8px;
+    }
+
+    /* Warnings */
+    .warn-item {
+      display: flex;
+      gap: 9px;
+      padding: 9px 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 11px;
+      color: var(--warn);
+      align-items: flex-start;
+      line-height: 1.5;
+    }
+
+    .warn-item:last-child { border-bottom: none; }
+    .warn-icon { flex-shrink: 0; margin-top: 1px; }
+
+    .no-warn {
+      padding: 8px 0;
+      font-size: 12px;
+      color: var(--accent);
+      display: flex;
+      gap: 7px;
+      align-items: center;
+    }
+
+    /* Export bar */
+    .export-row { display: flex; gap: 8px; flex-wrap: wrap; }
+
+    .btn {
+      padding: 8px 16px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 500;
+      font-family: inherit;
+      cursor: pointer;
+      border: 1px solid var(--border);
+      transition: all 0.12s;
+    }
+
+    .btn-accent { background: var(--accent); color: #000; border-color: var(--accent); }
+    .btn-accent:hover { background: #3dd48a; }
+    .btn-ghost { background: var(--bg-card); color: var(--text); }
+    .btn-ghost:hover { background: var(--bg-hover); border-color: var(--border-hi); }
+
+    /* Toast */
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: var(--bg-card);
+      border: 1px solid var(--accent);
+      color: var(--accent);
+      padding: 10px 16px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 500;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+      z-index: 1000;
+      opacity: 0;
+      transform: translateY(8px);
+      transition: opacity 0.2s, transform 0.2s;
+      pointer-events: none;
+    }
+
+    .toast.show { opacity: 1; transform: translateY(0); }
+
+    /* Footer note */
+    .footer-note {
+      font-size: 11px;
+      color: var(--text-muted);
+      line-height: 1.6;
+      padding-top: 4px;
+    }
+
+    .footer-note a { color: var(--accent); text-decoration: none; }
+    .footer-note a:hover { text-decoration: underline; }
+
+    /* Print */
+    @media print {
+      header { position: static; }
+      main { display: block; }
+      .input-panel { display: none; }
+      .results-panel { padding: 0; }
+      body { background: white; color: black; font-size: 12px; }
+      .hero-card, .metric-block { border: 1px solid #ccc; background: white; }
+      .hero-val, .metric-num { color: #1a7a44; }
+      .block-title, .hero-label, .metric-name, .hero-sub { color: #555; }
+      .gauge { background: #eee; }
+      .g-green { background: #30ba78; }
+      .g-amber { background: #f59e0b; }
+      .g-red { background: #ef4444; }
+      .footer-note, .export-row { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <div class="brand-mark">LH</div>
+    <div class="brand-text">
+      <h1>SUSE Longhorn Storage Sizing Calculator</h1>
+      <p>Production dimensioning for IOPS, throughput &amp; latency</p>
+    </div>
+  </div>
+  <span class="header-badge">v1.7 / v1.12 benchmark data</span>
+</header>
+
+<main>
+  <!-- ─────────────── INPUT PANEL ─────────────── -->
+  <div class="input-panel">
+
+    <!-- Cluster -->
+    <div class="card" id="sect-cluster">
+      <div class="card-header open" onclick="toggleCard('cluster')">
+        <span class="card-title"><span class="card-dot"></span>Cluster Configuration</span>
+        <span class="card-chev open" id="chev-cluster">▼</span>
+      </div>
+      <div class="card-body" id="body-cluster">
+
+        <div class="field">
+          <label>Worker nodes
+            <i class="tip" data-tip="Total worker nodes running Longhorn. Min 3 for HA. IOPS ceiling scales linearly with node count based on official benchmarks.">?</i>
+          </label>
+          <div class="slider-row">
+            <input type="range" id="nodes" min="3" max="50" value="3" step="1" oninput="syncSlider('nodes', '')">
+            <span class="slider-val" id="nodes-val">3</span>
+          </div>
+        </div>
+
+        <div class="field">
+          <label>Data engine
+            <i class="tip" data-tip="V1: iSCSI-based, user-space replication (default). V2: SPDK with NVMe passthrough — lower latency, higher IOPS, requires NVMe disks + extra CPU/RAM.">?</i>
+          </label>
+          <div class="btn-group" id="engine-grp">
+            <button class="active" onclick="activateBtn('engine-grp', this); state.engine='V1'; recalc()">V1 (default)</button>
+            <button onclick="activateBtn('engine-grp', this); state.engine='V2'; recalc()">V2 (NVMe/SPDK)</button>
+          </div>
+        </div>
+
+        <div class="field">
+          <label>Network bandwidth
+            <i class="tip" data-tip="Network speed between nodes. Write I/O is synchronously sent to all replicas over the network. Saturated networks cause write latency spikes.">?</i>
+          </label>
+          <select id="networkGbps" onchange="recalc()">
+            <option value="1">1 Gbps</option>
+            <option value="10" selected>10 Gbps (recommended)</option>
+            <option value="25">25 Gbps</option>
+            <option value="100">100 Gbps</option>
+          </select>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Storage -->
+    <div class="card" id="sect-storage">
+      <div class="card-header open" onclick="toggleCard('storage')">
+        <span class="card-title"><span class="card-dot"></span>Storage per Node</span>
+        <span class="card-chev open" id="chev-storage">▼</span>
+      </div>
+      <div class="card-body" id="body-storage">
+
+        <div class="field">
+          <label>Disk type
+            <i class="tip" data-tip="SSD/NVMe strongly recommended. HDD can cause instability under concurrent load (rebuilds, backups). Auto-fills IOPS and MB/s but you can override.">?</i>
+          </label>
+          <select id="diskType" onchange="onDiskTypeChange()">
+            <option value="HDD">HDD — 500 IOPS, 200 MB/s</option>
+            <option value="SSD" selected>SSD / EBS gp3 — 10,000 IOPS, 360 MB/s</option>
+            <option value="NVMe">NVMe — 100,000 IOPS, 3,000 MB/s</option>
+          </select>
+        </div>
+
+        <div class="field-row">
+          <div class="field">
+            <label>IOPS / disk
+              <i class="tip" data-tip="Native disk IOPS (no Longhorn overhead). Auto-set by disk type; override for your exact hardware.">?</i>
+            </label>
+            <input type="number" id="diskIops" value="10000" min="100" max="2000000" onchange="recalc()">
+          </div>
+          <div class="field">
+            <label>MB/s / disk
+              <i class="tip" data-tip="Native disk sequential throughput. Auto-set by disk type; override for your exact hardware.">?</i>
+            </label>
+            <input type="number" id="diskMbps" value="360" min="10" max="30000" onchange="recalc()">
+          </div>
+        </div>
+
+        <div class="field">
+          <label>Disk size (GiB)
+            <i class="tip" data-tip="Capacity of each physical disk. Used for storage capacity calculations.">?</i>
+          </label>
+          <input type="number" id="diskSizeGib" value="1000" min="1" max="65536" onchange="recalc()">
+        </div>
+
+        <div class="field">
+          <label>Disks per node
+            <i class="tip" data-tip="Number of disks per node. Multiple disks aggregate IOPS and capacity proportionally. Longhorn supports multiple disks per node.">?</i>
+          </label>
+          <div class="slider-row">
+            <input type="range" id="diskCount" min="1" max="24" value="1" step="1" oninput="syncSlider('diskCount', '')">
+            <span class="slider-val" id="diskCount-val">1</span>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Volume -->
+    <div class="card" id="sect-volume">
+      <div class="card-header open" onclick="toggleCard('volume')">
+        <span class="card-title"><span class="card-dot"></span>Volume Configuration</span>
+        <span class="card-chev open" id="chev-volume">▼</span>
+      </div>
+      <div class="card-body" id="body-volume">
+
+        <div class="field">
+          <label>Replica count
+            <i class="tip" data-tip="3 = default HA (tolerates 2 disk failures). 2 = recommended balance of HA and performance. 1 = no redundancy, fastest writes, data loss on disk failure.">?</i>
+          </label>
+          <div class="btn-group" id="replica-grp">
+            <button onclick="activateBtn('replica-grp', this); state.replicas=1; recalc()">1 — No HA</button>
+            <button onclick="activateBtn('replica-grp', this); state.replicas=2; recalc()">2 — Recommended</button>
+            <button class="active" onclick="activateBtn('replica-grp', this); state.replicas=3; recalc()">3 — Default</button>
+          </div>
+        </div>
+
+        <div class="field">
+          <label>Data locality
+            <i class="tip" data-tip="Strict-local: pod and volume replica must be co-located (fastest reads, no network hop). Best-effort: prefers local, falls back to remote. Disabled: reads any replica.">?</i>
+          </label>
+          <select id="locality" onchange="recalc()">
+            <option value="disabled">Disabled</option>
+            <option value="best-effort" selected>Best-effort (default)</option>
+            <option value="strict-local">Strict-local (fastest reads)</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label>Volume count
+            <i class="tip" data-tip="Total Longhorn volumes in the cluster. Cluster IOPS is shared — more volumes = less IOPS per volume. Contention grows above ~17 volumes per node.">?</i>
+          </label>
+          <div class="slider-row">
+            <input type="range" id="volumes" min="1" max="300" value="10" step="1" oninput="syncSlider('volumes', '')">
+            <span class="slider-val" id="volumes-val">10</span>
+          </div>
+        </div>
+
+        <div class="field-row">
+          <div class="field">
+            <label>Volume size (GiB)
+              <i class="tip" data-tip="Provisioned size of each volume. Used for total provisioned capacity vs available capacity check.">?</i>
+            </label>
+            <input type="number" id="volumeSizeGib" value="100" min="1" max="65536" onchange="recalc()">
+          </div>
+          <div class="field">
+            <label>Overprovisioning %
+              <i class="tip" data-tip="200% = volumes can sum to 2× effective storage (safe if volumes are not fully written). 100% = no overprovisioning. Longhorn default is 200%.">?</i>
+            </label>
+            <input type="number" id="overprovisioning" value="200" min="100" max="1000" onchange="recalc()">
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Workload -->
+    <div class="card" id="sect-workload">
+      <div class="card-header open" onclick="toggleCard('workload')">
+        <span class="card-title"><span class="card-dot"></span>Workload Profile</span>
+        <span class="card-chev open" id="chev-workload">▼</span>
+      </div>
+      <div class="card-body" id="body-workload">
+
+        <div class="field">
+          <label>
+            Read/write ratio —
+            <span id="readPct-lbl" style="color:var(--accent);font-weight:600">70% R</span>
+            / <span id="writePct-lbl">30% W</span>
+            <i class="tip" data-tip="Typical DB: 70/30 read-heavy. Write-heavy: logging, backups (20/80). Read-heavy: cache serving (95/5).">?</i>
+          </label>
+          <div class="slider-row">
+            <input type="range" id="readPct" min="0" max="100" value="70" step="5" oninput="syncReadPct()">
+          </div>
+        </div>
+
+        <div class="field">
+          <label>I/O pattern
+            <i class="tip" data-tip="Random: database workloads — IOPS-bound. Sequential: backups, streaming, analytics — throughput-bound. Mixed: 50/50 weighted average.">?</i>
+          </label>
+          <div class="btn-group" id="pattern-grp">
+            <button class="active" onclick="activateBtn('pattern-grp', this); state.pattern='random'; recalc()">Random</button>
+            <button onclick="activateBtn('pattern-grp', this); state.pattern='sequential'; recalc()">Sequential</button>
+            <button onclick="activateBtn('pattern-grp', this); state.pattern='mixed'; recalc()">Mixed</button>
+          </div>
+        </div>
+
+        <div class="field">
+          <label>Block size
+            <i class="tip" data-tip="I/O request size. Smaller = more IOPS, less throughput. Larger = fewer IOPS, more throughput. Databases: 4–16 KB. Streaming: 256 KB–1 MB.">?</i>
+          </label>
+          <select id="blockSize" onchange="recalc()">
+            <option value="4">4 KB — database default</option>
+            <option value="16">16 KB</option>
+            <option value="64">64 KB</option>
+            <option value="256">256 KB</option>
+            <option value="1024">1 MB — streaming</option>
+          </select>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ─────────────── RESULTS PANEL ─────────────── -->
+  <div class="results-panel">
+
+    <!-- Hero row -->
+    <div class="hero-row">
+      <div class="hero-card">
+        <div class="hero-label">Effective IOPS / vol</div>
+        <div class="hero-val" id="h-iops">—</div>
+        <div class="hero-sub">blended R/W mix</div>
+      </div>
+      <div class="hero-card">
+        <div class="hero-label">Effective MB/s / vol</div>
+        <div class="hero-val" id="h-mbps">—</div>
+        <div class="hero-sub">blended R/W mix</div>
+      </div>
+      <div class="hero-card">
+        <div class="hero-label">Avg Latency / vol</div>
+        <div class="hero-val" id="h-lat">—</div>
+        <div class="hero-sub">blended R/W mix</div>
+      </div>
+    </div>
+
+    <div class="metrics-grid">
+
+      <!-- Per-volume performance -->
+      <div class="metric-block">
+        <div class="block-title">Per-Volume Performance</div>
+
+        <div class="metric">
+          <div class="metric-row">
+            <span class="metric-name">Read IOPS</span>
+            <span><span class="metric-num" id="r-rIops">—</span><span class="metric-unit">IOPS</span></span>
+          </div>
+          <div class="gauge"><div class="gauge-bar g-green" id="g-rIops" style="width:0%"></div></div>
+        </div>
+
+        <div class="metric">
+          <div class="metric-row">
+            <span class="metric-name">Write IOPS</span>
+            <span><span class="metric-num" id="r-wIops">—</span><span class="metric-unit">IOPS</span></span>
+          </div>
+          <div class="gauge"><div class="gauge-bar g-green" id="g-wIops" style="width:0%"></div></div>
+        </div>
+
+        <div class="metric">
+          <div class="metric-row">
+            <span class="metric-name">Read MB/s</span>
+            <span><span class="metric-num" id="r-rMbps">—</span><span class="metric-unit">MB/s</span></span>
+          </div>
+          <div class="gauge"><div class="gauge-bar g-green" id="g-rMbps" style="width:0%"></div></div>
+        </div>
+
+        <div class="metric">
+          <div class="metric-row">
+            <span class="metric-name">Write MB/s</span>
+            <span><span class="metric-num" id="r-wMbps">—</span><span class="metric-unit">MB/s</span></span>
+          </div>
+          <div class="gauge"><div class="gauge-bar g-green" id="g-wMbps" style="width:0%"></div></div>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="metric">
+          <div class="metric-row">
+            <span class="metric-name">Read latency</span>
+            <span><span class="metric-num" id="r-rLat">—</span><span class="metric-unit" id="u-rLat">µs</span></span>
+          </div>
+        </div>
+
+        <div class="metric">
+          <div class="metric-row">
+            <span class="metric-name">Write latency</span>
+            <span><span class="metric-num" id="r-wLat">—</span><span class="metric-unit" id="u-wLat">µs</span></span>
+          </div>
+        </div>
+
+        <p class="sub-note">Gauge = % of cluster ceiling used</p>
+      </div>
+
+      <!-- Cluster totals -->
+      <div class="metric-block">
+        <div class="block-title">Cluster Totals</div>
+
+        <div class="metric">
+          <div class="metric-row">
+            <span class="metric-name">Total read IOPS</span>
+            <span><span class="metric-num" id="r-cRIops">—</span><span class="metric-unit">IOPS</span></span>
+          </div>
+          <div class="gauge"><div class="gauge-bar g-green" id="g-cRIops" style="width:0%"></div></div>
+        </div>
+
+        <div class="metric">
+          <div class="metric-row">
+            <span class="metric-name">Total write IOPS</span>
+            <span><span class="metric-num" id="r-cWIops">—</span><span class="metric-unit">IOPS</span></span>
+          </div>
+          <div class="gauge"><div class="gauge-bar g-green" id="g-cWIops" style="width:0%"></div></div>
+        </div>
+
+        <div class="metric">
+          <div class="metric-row">
+            <span class="metric-name">Read throughput</span>
+            <span><span class="metric-num" id="r-cRMbps">—</span><span class="metric-unit">MB/s</span></span>
+          </div>
+        </div>
+
+        <div class="metric">
+          <div class="metric-row">
+            <span class="metric-name">Write throughput</span>
+            <span><span class="metric-num" id="r-cWMbps">—</span><span class="metric-unit">MB/s</span></span>
+          </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="metric">
+          <div class="metric-row">
+            <span class="metric-name">Network utilisation</span>
+            <span><span class="metric-num" id="r-net">—</span><span class="metric-unit">%</span></span>
+          </div>
+          <div class="gauge"><div class="gauge-bar g-green" id="g-net" style="width:0%"></div></div>
+        </div>
+
+        <p class="sub-note">
+          IOPS ceiling: <span id="r-rCeil" style="color:var(--text)">—</span> read &nbsp;/&nbsp;
+          <span id="r-wCeil" style="color:var(--text)">—</span> write
+        </p>
+      </div>
+
+      <!-- Capacity -->
+      <div class="metric-block">
+        <div class="block-title">Capacity</div>
+
+        <div class="metric">
+          <div class="metric-row">
+            <span class="metric-name">Raw storage</span>
+            <span><span class="metric-num" id="r-raw">—</span><span class="metric-unit" id="u-raw">TiB</span></span>
+          </div>
+        </div>
+
+        <div class="metric">
+          <div class="metric-row">
+            <span class="metric-name">After replicas</span>
+            <span><span class="metric-num" id="r-eff">—</span><span class="metric-unit" id="u-eff">TiB</span></span>
+          </div>
+        </div>
+
+        <div class="metric">
+          <div class="metric-row">
+            <span class="metric-name">Provisionable (w/ overprov.)</span>
+            <span><span class="metric-num" id="r-prov">—</span><span class="metric-unit" id="u-prov">TiB</span></span>
+          </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="metric">
+          <div class="metric-row">
+            <span class="metric-name">Volumes total provisioned</span>
+            <span><span class="metric-num" id="r-vTot">—</span><span class="metric-unit" id="u-vTot">TiB</span></span>
+          </div>
+          <div class="gauge"><div class="gauge-bar g-green" id="g-cap" style="width:0%"></div></div>
+        </div>
+
+        <div class="metric">
+          <div class="metric-row">
+            <span class="metric-name">Storage efficiency</span>
+            <span><span class="metric-num" id="r-seff">—</span><span class="metric-unit">%</span></span>
+          </div>
+        </div>
+
+        <p class="sub-note">Gauge = provisioned ÷ provisionable</p>
+      </div>
+
+      <!-- Warnings -->
+      <div class="metric-block">
+        <div class="block-title">Warnings &amp; Recommendations</div>
+        <div id="warn-list"></div>
+      </div>
+
+    </div>
+
+    <!-- Export -->
+    <div class="export-row">
+      <button class="btn btn-accent" onclick="shareURL()">&#128279; Share URL</button>
+      <button class="btn btn-ghost" onclick="window.print()">&#128438; Export PDF</button>
+      <button class="btn btn-ghost" onclick="exportJSON()">&#123;&#125; Export JSON</button>
+      <button class="btn btn-ghost" onclick="exportCSV()">&#9776; Export CSV</button>
+    </div>
+
+    <p class="footer-note">
+      Calculations calibrated to Longhorn v1.12 official benchmarks (EC2 m5zn.2xlarge, 10 k IOPS EBS gp3, 3-node Calico cluster).
+      IOPS ceilings scale linearly with node count per benchmark data.
+      V2 engine estimates are based on SPDK architecture improvements and may vary.
+      Always validate with <a href="https://github.com/longhorn/kbench" target="_blank">kbench</a> in your environment.
+    </p>
+
+  </div>
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script>
+'use strict';
+
+// ── Default state ──────────────────────────────────────────────────────
+const DEFAULT = {
+  nodes: 3, engine: 'V1', networkGbps: 10,
+  diskType: 'SSD', diskIops: 10000, diskMbps: 360, diskSizeGib: 1000, diskCount: 1,
+  replicas: 3, locality: 'best-effort', volumes: 10, volumeSizeGib: 100, overprovisioning: 200,
+  readPct: 70, pattern: 'random', blockSizeKb: 4,
+};
+
+let S = Object.assign({}, DEFAULT);
+
+// ── Constants (from Longhorn v1.12 benchmark data) ─────────────────────
+// Benchmark: EC2 m5zn.2xlarge, 3 nodes, EBS gp3 (10k IOPS, 360 MB/s), Calico CNI
+const DISK = {
+  HDD:  { iops: 500,    mbps: 200,  latBase: 5000 },
+  SSD:  { iops: 10000,  mbps: 360,  latBase: 100  },
+  NVMe: { iops: 100000, mbps: 3000, latBase: 20   },
+};
+
+// Benchmark-calibrated IOPS ceilings for 3-node cluster with 10k IOPS disks
+// Reciprocal relationship: x_vols × y_iops_per_vol ≈ constant
+const PATTERN = {
+  random:     { rCeil: 31500, wCeil: 5250,  rMult3: 2.20, rMult2: 1.65, rMult1: 0.50, wMult: 0.115, wMult1: 0.29 },
+  sequential: { rCeil: 61500, wCeil: 10400, rMult3: 3.98, rMult2: 2.99, rMult1: 0.70, wMult: 0.230, wMult1: 0.57 },
+  mixed:      { rCeil: 46500, wCeil: 7825,  rMult3: 3.09, rMult2: 2.32, rMult1: 0.60, wMult: 0.173, wMult1: 0.43 },
+};
+
+const LOCALITY_BOOST = { disabled: 1.00, 'best-effort': 1.10, 'strict-local': 1.30 };
+
+// Block size factors relative to 4 KB baseline
+const BLOCK = {
+  4:    { iops: 1.000, bw: 1.00 },
+  16:   { iops: 0.400, bw: 1.60 },
+  64:   { iops: 0.110, bw: 1.76 },
+  256:  { iops: 0.030, bw: 1.92 },
+  1024: { iops: 0.009, bw: 2.30 },
+};
+
+// V2 engine: SPDK/NVMe passthrough (estimated; limited public benchmark data)
+const V2 = { iopsMult: 1.8, latMult: 0.22 };
+
+// Latency baseline calibrated to benchmark: SSD + V1 + 3r + best-effort = 750 µs (single vol)
+const LAT_BASE_US = 750;
+const LAT_DISK    = { HDD: 8.0, SSD: 1.0, NVMe: 0.15 };
+const LAT_ENGINE  = { V1: 1.0, V2: 0.22 };
+const LAT_REPLICA = { 1: 0.65, 2: 0.85, 3: 1.00 };
+
+// ── Calculation engine ──────────────────────────────────────────────────
+function calculate(s) {
+  const p   = PATTERN[s.pattern];
+  const bf  = BLOCK[s.blockSizeKb] || BLOCK[4];
+  const disk = DISK[s.diskType];
+  const wPct = (100 - s.readPct) / 100;
+  const rPct = s.readPct / 100;
+
+  // Node aggregate disk capacity
+  const nodeIops = s.diskIops * s.diskCount;
+  const nodeMbps = s.diskMbps * s.diskCount;
+
+  // Read/write multipliers based on replica count
+  const rMult = s.replicas === 3 ? p.rMult3 : s.replicas === 2 ? p.rMult2 : p.rMult1;
+  const wMult = s.replicas === 1 ? p.wMult1 : p.wMult;
+  const locBoost = LOCALITY_BOOST[s.locality];
+
+  // Hardware scale relative to benchmark (10k IOPS SSD)
+  const hwScale   = s.diskIops / 10000;
+  const nodeScale = s.nodes / 3;
+
+  // Replica scaling for ceilings — benchmark values are for 3 replicas:
+  //   Reads: fewer replicas → less aggregate read throughput (fewer copies to read from)
+  //   Writes: fewer replicas → less sync overhead → more write throughput
+  const rCeilScale = rMult / p.rMult3;                     // 1r≈0.23×, 2r≈0.75×, 3r=1.0×
+  const wCeilScale = s.replicas === 1 ? p.wMult1 / p.wMult : 1.0; // 1r≈2.52×, 2/3r=1.0×
+
+  // IOPS ceilings: scale by hardware, node count, and replica efficiency
+  const rIopsCeil = p.rCeil * hwScale * nodeScale * rCeilScale;
+  const wIopsCeil = p.wCeil * hwScale * nodeScale * wCeilScale;
+
+  // Bandwidth ceilings (disk aggregate vs network)
+  const netMbps    = s.networkGbps * 125;
+  const diskBwCeil = nodeMbps * s.nodes;
+  // Reads: mostly local with best-effort/strict-local; some cross-node
+  const rNetFactor = s.locality === 'strict-local' ? 0.05 : s.locality === 'best-effort' ? 0.25 : 1.0;
+  const rBwCeil    = Math.min(diskBwCeil * bf.bw, netMbps / rNetFactor);
+  // Writes: must cross network to all replicas
+  const wBwCeil    = Math.min(diskBwCeil * bf.bw, netMbps / s.replicas);
+
+  // Convert bandwidth ceilings to IOPS at current block size
+  const rBwAsIops = (rBwCeil  * 1024) / s.blockSizeKb;
+  const wBwAsIops = (wBwCeil  * 1024) / s.blockSizeKb;
+
+  // Effective cluster-level ceilings (min of IOPS and BW limits)
+  const effRCeil = Math.min(rIopsCeil, rBwAsIops);
+  const effWCeil = Math.min(wIopsCeil, wBwAsIops);
+
+  // V2 engine multiplier
+  const engMult = s.engine === 'V2' ? V2.iopsMult : 1.0;
+
+  // Unconstrained per-volume IOPS (single vol, no contention)
+  const rawRIopsVol = nodeIops * rMult * locBoost * bf.iops * engMult;
+  const rawWIopsVol = nodeIops * wMult              * bf.iops * engMult;
+
+  // Cluster-wide demand vs ceiling
+  const demandR = s.volumes * rawRIopsVol;
+  const demandW = s.volumes * rawWIopsVol;
+  const clusterR = Math.min(demandR, effRCeil);
+  const clusterW = Math.min(demandW, effWCeil);
+
+  // Per-volume (ceiling shared across volumes)
+  const volR = clusterR / s.volumes;
+  const volW = clusterW / s.volumes;
+
+  // Throughput
+  const volRMbps = (volR * s.blockSizeKb) / 1024;
+  const volWMbps = (volW * s.blockSizeKb) / 1024;
+  const cRMbps   = (clusterR * s.blockSizeKb) / 1024;
+  const cWMbps   = (clusterW * s.blockSizeKb) / 1024;
+
+  // Network utilisation
+  const netWriteLoad = cWMbps * s.replicas;
+  const netReadLoad  = cRMbps * rNetFactor;
+  const netUtil = (netWriteLoad + netReadLoad) / netMbps;
+
+  // Latency: calibrated base × disk × engine × replica scaling, then contention
+  const latBase = LAT_BASE_US * LAT_DISK[s.diskType] * LAT_ENGINE[s.engine] * LAT_REPLICA[s.replicas];
+  // Volume density relative to 3-node reference (contention grows above 1 vol/node × 3)
+  const density = (s.volumes / s.nodes) * 3;
+  // Benchmark: at density=51, lat ≈ 2.1× single-vol (743µs → 1581µs)
+  const contention = 1 + Math.max(0, (density - 1) / 50) * 1.107;
+  const rLatUs = latBase * contention;
+  const wLatUs = rLatUs * 1.85; // writes are slower due to synchronous replication
+
+  // Capacity
+  const rawGib  = s.nodes * s.diskCount * s.diskSizeGib;
+  const effGib  = rawGib / s.replicas;
+  const provGib = effGib * (s.overprovisioning / 100);
+  const vTotGib = s.volumes * s.volumeSizeGib;
+
+  // Utilisation ratios (for gauges)
+  const rIopsUtil = demandR > 0 ? clusterR / effRCeil : 0;
+  const wIopsUtil = demandW > 0 ? clusterW / effWCeil : 0;
+  const rBwUtil   = cRMbps / (nodeMbps * s.nodes);
+  const wBwUtil   = cWMbps / (nodeMbps * s.nodes);
+  const capUtil   = provGib > 0 ? vTotGib / provGib : 0;
+
+  // Blended metrics
+  const blendIops = volR * rPct + volW * wPct;
+  const blendMbps = volRMbps * rPct + volWMbps * wPct;
+  const blendLat  = rLatUs * rPct + wLatUs * wPct;
+
+  // Warnings
+  const warns = [];
+  if (s.diskType === 'HDD')
+    warns.push('HDD drives can cause instability during concurrent operations (replica rebuilds, backups). SSD or NVMe strongly recommended for production.');
+  if (s.replicas === 1)
+    warns.push('Single replica — no data redundancy. A disk failure will result in permanent data loss.');
+  if (rIopsUtil > 0.85)
+    warns.push('Read IOPS ceiling reached (' + pct(rIopsUtil) + '% used). Per-volume read IOPS is being throttled. Add nodes or reduce volume count.');
+  if (wIopsUtil > 0.85)
+    warns.push('Write IOPS ceiling reached (' + pct(wIopsUtil) + '% used). Per-volume write IOPS is being throttled. Add nodes, upgrade disks, or reduce volume count.');
+  if (netUtil > 0.80)
+    warns.push('Network at ' + pct(netUtil) + '% utilisation. Consider higher bandwidth, reducing replicas, or improving data locality to reduce cross-node traffic.');
+  if (density > 51)
+    warns.push('Volume density (' + Math.round(density) + ' per 3-node equivalent) is above the benchmark threshold of 51. Latency will increase significantly.');
+  if (s.engine === 'V2' && s.diskType !== 'NVMe')
+    warns.push('V2 engine is optimised for local NVMe. Performance gains will be minimal without NVMe disks.');
+  if (vTotGib > provGib)
+    warns.push('Total provisioned volume capacity (' + fmtGib(vTotGib) + ') exceeds provisionable storage (' + fmtGib(provGib) + '). Risk of out-of-space on writes.');
+  if (s.locality === 'strict-local' && s.nodes < s.replicas)
+    warns.push('Strict-local requires at least as many nodes as replicas. Scheduling may fail.');
+
+  return {
+    volR, volW, volRMbps, volWMbps, rLatUs, wLatUs,
+    clusterR, clusterW, cRMbps, cWMbps, netUtil, netMbps,
+    rawGib, effGib, provGib, vTotGib, storEff: (1 / s.replicas) * 100,
+    rIopsUtil, wIopsUtil, rBwUtil, wBwUtil, capUtil,
+    effRCeil, effWCeil,
+    blendIops, blendMbps, blendLat,
+    warns,
+  };
+}
+
+// ── Formatting ─────────────────────────────────────────────────────────
+function fmt(n) {
+  if (n == null || isNaN(n)) return '—';
+  if (n >= 1e6)  return (n / 1e6).toFixed(1) + 'M';
+  if (n >= 10000) return Math.round(n / 100) / 10 + 'k';
+  if (n >= 1000)  return (n / 1000).toFixed(1) + 'k';
+  return String(Math.round(n));
+}
+
+function fmtMbps(n) {
+  if (n >= 1000) return (n / 1000).toFixed(1) + 'k';
+  return n.toFixed(1);
+}
+
+function fmtLat(us) {
+  if (us >= 1000) return { v: (us / 1000).toFixed(1), u: 'ms' };
+  return { v: String(Math.round(us)), u: 'µs' };
+}
+
+function fmtStorage(gib) {
+  if (gib >= 1024) return { v: (gib / 1024).toFixed(1), u: 'TiB' };
+  return { v: String(Math.round(gib)), u: 'GiB' };
+}
+
+function fmtGib(gib) {
+  if (gib >= 1024) return (gib / 1024).toFixed(1) + ' TiB';
+  return Math.round(gib) + ' GiB';
+}
+
+function pct(r) { return Math.round(r * 100); }
+
+// ── Gauge color ─────────────────────────────────────────────────────────
+function gClass(r) {
+  if (r >= 0.85) return 'g-red';
+  if (r >= 0.60) return 'g-amber';
+  return 'g-green';
+}
+
+// ── DOM helpers ─────────────────────────────────────────────────────────
+function el(id)       { return document.getElementById(id); }
+function setText(id, v) { const e = el(id); if (e) e.textContent = v; }
+
+function setGauge(id, r) {
+  const e = el(id);
+  if (!e) return;
+  e.style.width = Math.min(r, 1) * 100 + '%';
+  e.className = 'gauge-bar ' + gClass(r);
+}
+
+function setStorage(numId, unitId, gib) {
+  const s = fmtStorage(gib);
+  setText(numId, s.v);
+  setText(unitId, s.u);
+}
+
+// ── Render ──────────────────────────────────────────────────────────────
+function render(r) {
+  // Hero
+  const hl = fmtLat(r.blendLat);
+  setText('h-iops', fmt(r.blendIops));
+  setText('h-mbps', fmtMbps(r.blendMbps));
+  setText('h-lat',  hl.v + ' ' + hl.u);
+
+  // Per-volume IOPS
+  setText('r-rIops', fmt(r.volR));    setGauge('g-rIops', r.rIopsUtil);
+  setText('r-wIops', fmt(r.volW));    setGauge('g-wIops', r.wIopsUtil);
+  setText('r-rMbps', fmtMbps(r.volRMbps)); setGauge('g-rMbps', r.rBwUtil);
+  setText('r-wMbps', fmtMbps(r.volWMbps)); setGauge('g-wMbps', r.wBwUtil);
+
+  const rl = fmtLat(r.rLatUs); setText('r-rLat', rl.v); setText('u-rLat', rl.u);
+  const wl = fmtLat(r.wLatUs); setText('r-wLat', wl.v); setText('u-wLat', wl.u);
+
+  // Cluster
+  setText('r-cRIops', fmt(r.clusterR));    setGauge('g-cRIops', r.rIopsUtil);
+  setText('r-cWIops', fmt(r.clusterW));    setGauge('g-cWIops', r.wIopsUtil);
+  setText('r-cRMbps', fmtMbps(r.cRMbps));
+  setText('r-cWMbps', fmtMbps(r.cWMbps));
+  setText('r-net',    pct(r.netUtil));      setGauge('g-net', r.netUtil);
+  setText('r-rCeil',  fmt(r.effRCeil));
+  setText('r-wCeil',  fmt(r.effWCeil));
+
+  // Capacity
+  setStorage('r-raw',  'u-raw',  r.rawGib);
+  setStorage('r-eff',  'u-eff',  r.effGib);
+  setStorage('r-prov', 'u-prov', r.provGib);
+  setStorage('r-vTot', 'u-vTot', r.vTotGib);
+  setText('r-seff', Math.round(r.storEff));
+  setGauge('g-cap', r.capUtil);
+
+  // Warnings
+  const wEl = el('warn-list');
+  if (!r.warns.length) {
+    wEl.innerHTML = '<div class="no-warn">&#10003; No issues detected</div>';
+  } else {
+    wEl.innerHTML = r.warns.map(w =>
+      '<div class="warn-item"><span class="warn-icon">&#9888;</span><span>' + w + '</span></div>'
+    ).join('');
+  }
+}
+
+// ── State gather ────────────────────────────────────────────────────────
+function gatherState() {
+  S.nodes          = +el('nodes').value;
+  S.networkGbps    = +el('networkGbps').value;
+  S.diskType       = el('diskType').value;
+  S.diskIops       = +el('diskIops').value;
+  S.diskMbps       = +el('diskMbps').value;
+  S.diskSizeGib    = +el('diskSizeGib').value;
+  S.diskCount      = +el('diskCount').value;
+  S.locality       = el('locality').value;
+  S.volumes        = +el('volumes').value;
+  S.volumeSizeGib  = +el('volumeSizeGib').value;
+  S.overprovisioning = +el('overprovisioning').value;
+  S.readPct        = +el('readPct').value;
+  S.blockSizeKb    = +el('blockSize').value;
+}
+
+function recalc() {
+  gatherState();
+  render(calculate(S));
+}
+
+// ── UI helpers ──────────────────────────────────────────────────────────
+function syncSlider(id) {
+  el(id + '-val').textContent = el(id).value;
+  recalc();
+}
+
+function syncReadPct() {
+  const v = +el('readPct').value;
+  el('readPct-lbl').textContent  = v + '% R';
+  el('writePct-lbl').textContent = (100 - v) + '% W';
+  recalc();
+}
+
+function toggleCard(name) {
+  const body = el('body-' + name);
+  const hdr  = document.querySelector('#sect-' + name + ' .card-header');
+  const chev = el('chev-' + name);
+  const open = body.style.display !== 'none';
+  body.style.display = open ? 'none' : 'flex';
+  hdr.classList.toggle('open', !open);
+  chev.classList.toggle('open', !open);
+}
+
+function activateBtn(groupId, btn) {
+  document.querySelectorAll('#' + groupId + ' button').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+function onDiskTypeChange() {
+  const d = DISK[el('diskType').value];
+  el('diskIops').value = d.iops;
+  el('diskMbps').value = d.mbps;
+  recalc();
+}
+
+// ── Export ──────────────────────────────────────────────────────────────
+function shareURL() {
+  gatherState();
+  window.location.hash = btoa(JSON.stringify(S));
+  navigator.clipboard.writeText(window.location.href)
+    .then(() => toast('URL copied to clipboard'))
+    .catch(() => toast('URL updated — copy from address bar'));
+}
+
+function exportJSON() {
+  gatherState();
+  const result = calculate(S);
+  dl('longhorn-sizing.json', JSON.stringify({ inputs: S, outputs: result }, null, 2), 'application/json');
+  toast('JSON exported');
+}
+
+function exportCSV() {
+  gatherState();
+  const r = calculate(S);
+  const rows = [
+    ['Category', 'Parameter', 'Value', 'Unit'],
+    ['Input', 'Nodes', S.nodes, ''],
+    ['Input', 'Data Engine', S.engine, ''],
+    ['Input', 'Network', S.networkGbps, 'Gbps'],
+    ['Input', 'Disk Type', S.diskType, ''],
+    ['Input', 'Disk IOPS', S.diskIops, 'IOPS'],
+    ['Input', 'Disk MB/s', S.diskMbps, 'MB/s'],
+    ['Input', 'Disk Size', S.diskSizeGib, 'GiB'],
+    ['Input', 'Disks / Node', S.diskCount, ''],
+    ['Input', 'Replicas', S.replicas, ''],
+    ['Input', 'Data Locality', S.locality, ''],
+    ['Input', 'Volume Count', S.volumes, ''],
+    ['Input', 'Volume Size', S.volumeSizeGib, 'GiB'],
+    ['Input', 'Overprovisioning', S.overprovisioning, '%'],
+    ['Input', 'Read Ratio', S.readPct, '%'],
+    ['Input', 'Pattern', S.pattern, ''],
+    ['Input', 'Block Size', S.blockSizeKb, 'KB'],
+    ['Output', 'Read IOPS / vol',    Math.round(r.volR),      'IOPS'],
+    ['Output', 'Write IOPS / vol',   Math.round(r.volW),      'IOPS'],
+    ['Output', 'Read MB/s / vol',    r.volRMbps.toFixed(2),   'MB/s'],
+    ['Output', 'Write MB/s / vol',   r.volWMbps.toFixed(2),   'MB/s'],
+    ['Output', 'Read Latency',       Math.round(r.rLatUs),    'µs'],
+    ['Output', 'Write Latency',      Math.round(r.wLatUs),    'µs'],
+    ['Output', 'Cluster Read IOPS',  Math.round(r.clusterR),  'IOPS'],
+    ['Output', 'Cluster Write IOPS', Math.round(r.clusterW),  'IOPS'],
+    ['Output', 'Cluster Read MB/s',  r.cRMbps.toFixed(2),     'MB/s'],
+    ['Output', 'Cluster Write MB/s', r.cWMbps.toFixed(2),     'MB/s'],
+    ['Output', 'Network Util',       pct(r.netUtil),          '%'],
+    ['Output', 'Read IOPS Ceiling',  Math.round(r.effRCeil),  'IOPS'],
+    ['Output', 'Write IOPS Ceiling', Math.round(r.effWCeil),  'IOPS'],
+    ['Output', 'Raw Storage',        r.rawGib.toFixed(1),     'GiB'],
+    ['Output', 'Effective Storage',  r.effGib.toFixed(1),     'GiB'],
+    ['Output', 'Provisionable',      r.provGib.toFixed(1),    'GiB'],
+    ['Output', 'Vol Total Prov.',    r.vTotGib.toFixed(1),    'GiB'],
+  ];
+  const csv = rows.map(row => row.map(c => '"' + String(c).replace(/"/g, '""') + '"').join(',')).join('\n');
+  dl('longhorn-sizing.csv', csv, 'text/csv');
+  toast('CSV exported');
+}
+
+function dl(name, content, type) {
+  const a = Object.assign(document.createElement('a'), {
+    href: URL.createObjectURL(new Blob([content], { type })),
+    download: name,
+  });
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+function toast(msg) {
+  const t = el('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+// ── Restore from URL hash ───────────────────────────────────────────────
+function applyState() {
+  const setVal = (id, v) => { const e = el(id); if (e) e.value = v; };
+  setVal('nodes',          S.nodes);    el('nodes-val').textContent = S.nodes;
+  setVal('networkGbps',    S.networkGbps);
+  setVal('diskType',       S.diskType);
+  setVal('diskIops',       S.diskIops);
+  setVal('diskMbps',       S.diskMbps);
+  setVal('diskSizeGib',    S.diskSizeGib);
+  setVal('diskCount',      S.diskCount);  el('diskCount-val').textContent = S.diskCount;
+  setVal('locality',       S.locality);
+  setVal('volumes',        S.volumes);    el('volumes-val').textContent = S.volumes;
+  setVal('volumeSizeGib',  S.volumeSizeGib);
+  setVal('overprovisioning', S.overprovisioning);
+  setVal('readPct',        S.readPct);
+  el('readPct-lbl').textContent  = S.readPct + '% R';
+  el('writePct-lbl').textContent = (100 - S.readPct) + '% W';
+  setVal('blockSize',      S.blockSizeKb);
+
+  const engIdx     = S.engine === 'V2' ? 1 : 0;
+  const replicaIdx = S.replicas - 1;
+  const patIdx     = { random: 0, sequential: 1, mixed: 2 }[S.pattern];
+  setBtnActive('engine-grp',  engIdx);
+  setBtnActive('replica-grp', replicaIdx);
+  setBtnActive('pattern-grp', patIdx);
+}
+
+function setBtnActive(groupId, idx) {
+  document.querySelectorAll('#' + groupId + ' button')
+    .forEach((b, i) => b.classList.toggle('active', i === idx));
+}
+
+function loadHash() {
+  const h = window.location.hash.slice(1);
+  if (!h) return;
+  try { Object.assign(S, JSON.parse(atob(h))); applyState(); } catch (_) {}
+}
+
+// ── Boot ────────────────────────────────────────────────────────────────
+loadHash();
+recalc();
+</script>
+</body>
+</html>
