@@ -5,7 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>SUSE Longhorn Storage Sizing Calculator</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=SUSE:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -14,9 +15,9 @@
       --bg-card:     #162030;
       --bg-input:    #0d1520;
       --bg-hover:    #1a2a40;
-      --accent:      #30ba78;
-      --accent-mid:  #25935f;
-      --accent-glow: rgba(48,186,120,0.12);
+      --accent:      #73BA25;
+      --accent-mid:  #5a9320;
+      --accent-glow: rgba(115,186,37,0.12);
       --text:        #dde6f0;
       --text-muted:  #6a8096;
       --border:      #1e3048;
@@ -24,11 +25,11 @@
       --warn:        #f59e0b;
       --danger:      #ef4444;
       --info:        #60a5fa;
-      --radius:      10px;
+      --radius:      8px;
     }
 
     body {
-      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      font-family: 'SUSE', system-ui, -apple-system, sans-serif;
       background: var(--bg);
       color: var(--text);
       min-height: 100vh;
@@ -67,7 +68,7 @@
       font-weight: 800;
       font-size: 14px;
       color: #000;
-      letter-spacing: -0.5px;
+      letter-spacing: 0px;
       flex-shrink: 0;
     }
 
@@ -147,7 +148,7 @@
       font-size: 11px;
       font-weight: 600;
       text-transform: uppercase;
-      letter-spacing: 0.08em;
+      letter-spacing: 0.06em;
       color: var(--text-muted);
       display: flex;
       align-items: center;
@@ -212,7 +213,7 @@
       left: 18px;
       top: 50%;
       transform: translateY(-50%);
-      background: #1e3048;
+      background: var(--bg-card);
       border: 1px solid var(--border-hi);
       color: var(--text);
       font-size: 11px;
@@ -342,7 +343,7 @@
       font-size: 10px;
       font-weight: 600;
       text-transform: uppercase;
-      letter-spacing: 0.07em;
+      letter-spacing: 0.06em;
       color: var(--text-muted);
       margin-bottom: 6px;
     }
@@ -382,7 +383,7 @@
       font-size: 10px;
       font-weight: 600;
       text-transform: uppercase;
-      letter-spacing: 0.08em;
+      letter-spacing: 0.06em;
       color: var(--text-muted);
       margin-bottom: 14px;
       display: flex;
@@ -497,7 +498,7 @@
     }
 
     .btn-accent { background: var(--accent); color: #000; border-color: var(--accent); }
-    .btn-accent:hover { background: #3dd48a; }
+    .btn-accent:hover { background: #85c93a; }
     .btn-ghost { background: var(--bg-card); color: var(--text); }
     .btn-ghost:hover { background: var(--bg-hover); border-color: var(--border-hi); }
 
@@ -542,10 +543,10 @@
       .results-panel { padding: 0; }
       body { background: white; color: black; font-size: 12px; }
       .hero-card, .metric-block { border: 1px solid #ccc; background: white; }
-      .hero-val, .metric-num { color: #1a7a44; }
+      .hero-val, .metric-num { color: #3e6b15; }
       .block-title, .hero-label, .metric-name, .hero-sub { color: #555; }
       .gauge { background: #eee; }
-      .g-green { background: #30ba78; }
+      .g-green { background: #4a7a1a; }
       .g-amber { background: #f59e0b; }
       .g-red { background: #ef4444; }
       .footer-note, .export-row { display: none; }
