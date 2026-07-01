@@ -535,6 +535,119 @@
     .footer-note a { color: var(--accent); text-decoration: none; }
     .footer-note a:hover { text-decoration: underline; }
 
+    /* ── Mode toggle ─────────────────────────────── */
+    .mode-toggle-bar {
+      display: flex;
+      border-radius: var(--radius);
+      overflow: hidden;
+      border: 1px solid var(--border);
+      margin-bottom: 4px;
+      flex-shrink: 0;
+    }
+
+    .mode-tab {
+      flex: 1;
+      padding: 10px 8px;
+      background: var(--bg-input);
+      border: none;
+      border-right: 1px solid var(--border);
+      color: var(--text-muted);
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      font-family: inherit;
+      transition: all 0.12s;
+      line-height: 1.3;
+    }
+
+    .mode-tab:last-child { border-right: none; }
+
+    .mode-tab.active { background: var(--accent); color: #000; font-weight: 700; }
+
+    .mode-tab:hover:not(.active) { background: var(--bg-hover); color: var(--text); }
+
+    /* ── Recommendation cards ────────────────────── */
+    .rec-grid { display: flex; gap: 12px; flex-wrap: wrap; }
+
+    .rec-card {
+      flex: 1;
+      min-width: 180px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .rec-card-first { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent-glow); }
+
+    .rec-badges { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+
+    .rec-badge-type {
+      font-size: 11px;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 4px;
+      background: var(--border-hi);
+      color: var(--text);
+    }
+
+    .rec-badge-best {
+      font-size: 10px;
+      font-weight: 600;
+      padding: 2px 7px;
+      border-radius: 4px;
+      background: var(--accent-glow);
+      color: var(--accent);
+      border: 1px solid rgba(48,186,120,0.3);
+    }
+
+    .rec-config { display: flex; flex-direction: column; gap: 5px; }
+
+    .rec-config-row { display: flex; justify-content: space-between; font-size: 12px; }
+    .rec-config-row span { color: var(--text-muted); }
+    .rec-config-row strong { color: var(--text); font-weight: 600; }
+
+    .rec-perf { display: flex; flex-direction: column; gap: 5px; }
+
+    .rec-perf-row { display: flex; justify-content: space-between; font-size: 12px; color: var(--text-muted); }
+    .rec-perf-row span:last-child { color: var(--text); }
+    .rec-perf-row em { font-style: normal; font-size: 10px; margin-left: 4px; }
+
+    .rec-apply {
+      margin-top: auto;
+      padding: 8px 12px;
+      background: transparent;
+      border: 1px solid var(--border-hi);
+      border-radius: 6px;
+      color: var(--accent);
+      font-size: 11px;
+      font-weight: 500;
+      cursor: pointer;
+      font-family: inherit;
+      transition: all 0.12s;
+      text-align: center;
+      width: 100%;
+    }
+
+    .rec-apply:hover { background: var(--accent); color: #000; border-color: var(--accent); font-weight: 700; }
+
+    .rev-empty {
+      background: var(--bg-card);
+      border: 1px dashed var(--border-hi);
+      border-radius: var(--radius);
+      padding: 32px 20px;
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 13px;
+      line-height: 1.8;
+    }
+
+    #fwd-inputs, #rev-inputs { flex-direction: column; gap: 10px; }
+    #rev-results { flex-direction: column; gap: 14px; }
+
     /* Print */
     @media print {
       header { position: static; }
@@ -569,6 +682,15 @@
 <main>
   <!-- ─────────────── INPUT PANEL ─────────────── -->
   <div class="input-panel">
+
+    <!-- Mode toggle -->
+    <div class="mode-toggle-bar">
+      <button class="mode-tab active" onclick="setMode('forward')">&#9881; Size from Hardware</button>
+      <button class="mode-tab" onclick="setMode('reverse')">&#8594; Find Hardware for Target</button>
+    </div>
+
+    <!-- Forward mode inputs -->
+    <div id="fwd-inputs">
 
     <!-- Cluster -->
     <div class="card" id="sect-cluster">
@@ -772,10 +894,149 @@
       </div>
     </div>
 
+    </div><!-- /fwd-inputs -->
+
+    <!-- Reverse mode inputs -->
+    <div id="rev-inputs">
+
+      <!-- Targets -->
+      <div class="card" id="sect-rev-targets">
+        <div class="card-header open" onclick="toggleCard('rev-targets')">
+          <span class="card-title"><span class="card-dot"></span>Performance Targets</span>
+          <span class="card-chev open" id="chev-rev-targets">▼</span>
+        </div>
+        <div class="card-body" id="body-rev-targets">
+          <p style="font-size:11px;color:var(--text-muted)">Fill in one or more targets. Leave blank to ignore that dimension.</p>
+          <div class="field-row">
+            <div class="field">
+              <label>Read IOPS / vol <i class="tip" data-tip="Target per-volume read IOPS. The solver finds the minimum hardware that meets or exceeds this.">?</i></label>
+              <input type="number" id="rev-rIops" placeholder="e.g. 5000" min="0" oninput="recalc()">
+            </div>
+            <div class="field">
+              <label>Write IOPS / vol <i class="tip" data-tip="Target per-volume write IOPS. Writes are typically the most constraining dimension in Longhorn.">?</i></label>
+              <input type="number" id="rev-wIops" placeholder="e.g. 1000" min="0" oninput="recalc()">
+            </div>
+          </div>
+          <div class="field-row">
+            <div class="field">
+              <label>Read MB/s / vol <i class="tip" data-tip="Target read throughput. Converted to IOPS-equivalent at the selected block size, then takes the max with the IOPS target.">?</i></label>
+              <input type="number" id="rev-rMbps" placeholder="e.g. 100" min="0" oninput="recalc()">
+            </div>
+            <div class="field">
+              <label>Write MB/s / vol <i class="tip" data-tip="Target write throughput. Converted to IOPS-equivalent at the selected block size.">?</i></label>
+              <input type="number" id="rev-wMbps" placeholder="e.g. 20" min="0" oninput="recalc()">
+            </div>
+          </div>
+          <div class="field">
+            <label>Max latency (µs) <i class="tip" data-tip="Optional. Used for feasibility checking only — the solver warns if the best achievable latency exceeds this target.">?</i></label>
+            <input type="number" id="rev-lat" placeholder="e.g. 2000" min="0" oninput="recalc()">
+          </div>
+        </div>
+      </div>
+
+      <!-- Workload -->
+      <div class="card" id="sect-rev-workload">
+        <div class="card-header open" onclick="toggleCard('rev-workload')">
+          <span class="card-title"><span class="card-dot"></span>Workload Profile</span>
+          <span class="card-chev open" id="chev-rev-workload">▼</span>
+        </div>
+        <div class="card-body" id="body-rev-workload">
+          <div class="field">
+            <label>
+              Read/write ratio —
+              <span id="rev-readPct-lbl" style="color:var(--accent);font-weight:600">70% R</span>
+              / <span id="rev-writePct-lbl">30% W</span>
+              <i class="tip" data-tip="Determines whether reads or writes drive the hardware requirement.">?</i>
+            </label>
+            <div class="slider-row">
+              <input type="range" id="rev-readPct" min="0" max="100" value="70" step="5" oninput="syncRevReadPct()">
+            </div>
+          </div>
+          <div class="field">
+            <label>I/O pattern <i class="tip" data-tip="Random: IOPS-bound ceiling applies. Sequential: throughput ceiling. Changes which benchmark constraint limits the solver.">?</i></label>
+            <div class="btn-group" id="rev-pattern-grp">
+              <button class="active" onclick="activateBtn('rev-pattern-grp',this);S.rev.pattern='random';recalc()">Random</button>
+              <button onclick="activateBtn('rev-pattern-grp',this);S.rev.pattern='sequential';recalc()">Sequential</button>
+              <button onclick="activateBtn('rev-pattern-grp',this);S.rev.pattern='mixed';recalc()">Mixed</button>
+            </div>
+          </div>
+          <div class="field">
+            <label>Block size <i class="tip" data-tip="Affects the IOPS ↔ MB/s conversion for your targets. Database: 4 KB. Streaming: 256 KB–1 MB.">?</i></label>
+            <select id="rev-blockSize" onchange="recalc()">
+              <option value="4">4 KB — database default</option>
+              <option value="16">16 KB</option>
+              <option value="64">64 KB</option>
+              <option value="256">256 KB</option>
+              <option value="1024">1 MB — streaming</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Volume count <i class="tip" data-tip="Total Longhorn volumes in the cluster. More volumes = cluster IOPS shared further, requiring proportionally higher hardware.">?</i></label>
+            <div class="slider-row">
+              <input type="range" id="rev-volumes" min="1" max="300" value="10" step="1" oninput="syncRevSlider('rev-volumes')">
+              <span class="slider-val" id="rev-volumes-val">10</span>
+            </div>
+          </div>
+          <div class="field">
+            <label>Replica count <i class="tip" data-tip="More replicas = higher write overhead but better read distribution. Directly impacts required disk IOPS.">?</i></label>
+            <div class="btn-group" id="rev-replica-grp">
+              <button onclick="activateBtn('rev-replica-grp',this);S.rev.replicas=1;recalc()">1 — No HA</button>
+              <button onclick="activateBtn('rev-replica-grp',this);S.rev.replicas=2;recalc()">2</button>
+              <button class="active" onclick="activateBtn('rev-replica-grp',this);S.rev.replicas=3;recalc()">3 — Default</button>
+            </div>
+          </div>
+          <div class="field">
+            <label>Data locality</label>
+            <select id="rev-locality" onchange="recalc()">
+              <option value="disabled">Disabled</option>
+              <option value="best-effort" selected>Best-effort (default)</option>
+              <option value="strict-local">Strict-local</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Constraints -->
+      <div class="card" id="sect-rev-constraints">
+        <div class="card-header open" onclick="toggleCard('rev-constraints')">
+          <span class="card-title"><span class="card-dot"></span>Constraints (optional)</span>
+          <span class="card-chev open" id="chev-rev-constraints">▼</span>
+        </div>
+        <div class="card-body" id="body-rev-constraints">
+          <div class="field">
+            <label>Fixed node count <i class="tip" data-tip="Set to 0 for the solver to choose. If non-zero, only this node count is evaluated.">?</i></label>
+            <input type="number" id="rev-nodes" value="0" min="0" max="100" placeholder="0 = solver picks" onchange="recalc()">
+          </div>
+          <div class="field">
+            <label>Disk type <i class="tip" data-tip="'Any' lets the solver pick the cheapest feasible option (SSD or NVMe). Restrict to a specific type to match your procurement.">?</i></label>
+            <select id="rev-diskType" onchange="recalc()">
+              <option value="any">Any (solver picks)</option>
+              <option value="SSD">SSD only</option>
+              <option value="NVMe">NVMe only</option>
+              <option value="HDD">HDD only</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Network bandwidth <i class="tip" data-tip="Available network speed between nodes. The solver warns if the minimum write replication traffic exceeds this.">?</i></label>
+            <select id="rev-network" onchange="recalc()">
+              <option value="1">1 Gbps</option>
+              <option value="10" selected>10 Gbps</option>
+              <option value="25">25 Gbps</option>
+              <option value="100">100 Gbps</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /rev-inputs -->
+
   </div>
 
   <!-- ─────────────── RESULTS PANEL ─────────────── -->
   <div class="results-panel">
+
+    <!-- Forward results -->
+    <div id="fwd-results" style="display:contents">
 
     <!-- Hero row -->
     <div class="hero-row">
@@ -956,6 +1217,11 @@
 
     </div>
 
+    </div><!-- /fwd-results -->
+
+    <!-- Reverse results (populated by renderReverse) -->
+    <div id="rev-results" style="display:none"></div>
+
     <!-- Export -->
     <div class="export-row">
       <button class="btn btn-accent" onclick="shareURL()">&#128279; Share URL</button>
@@ -981,13 +1247,19 @@
 
 // ── Default state ──────────────────────────────────────────────────────
 const DEFAULT = {
+  mode: 'forward',
   nodes: 3, engine: 'V1', networkGbps: 10,
   diskType: 'SSD', diskIops: 10000, diskMbps: 360, diskSizeGib: 1000, diskCount: 1,
   replicas: 3, locality: 'best-effort', volumes: 10, volumeSizeGib: 100, overprovisioning: 200,
   readPct: 70, pattern: 'random', blockSizeKb: 4,
+  rev: {
+    targetRIops: null, targetWIops: null, targetRMbps: null, targetWMbps: null, targetLatUs: null,
+    volumes: 10, replicas: 3, locality: 'best-effort', pattern: 'random', blockSizeKb: 4, readPct: 70,
+    fixedNodes: 0, fixedDiskType: 'any', networkGbps: 10,
+  },
 };
 
-let S = Object.assign({}, DEFAULT);
+let S = { ...DEFAULT, rev: { ...DEFAULT.rev } };
 
 // ── Constants (from Longhorn v1.12 benchmark data) ─────────────────────
 // Benchmark: EC2 m5zn.2xlarge, 3 nodes, EBS gp3 (10k IOPS, 360 MB/s), Calico CNI
@@ -1277,9 +1549,237 @@ function gatherState() {
   S.blockSizeKb    = +el('blockSize').value;
 }
 
+// ── Reverse mode ────────────────────────────────────────────────────────
+
+function gatherRevState() {
+  const num = (id) => { const e = el(id); if (!e) return null; const v = e.value; return (v === '' || v === null) ? null : +v; };
+  const r = S.rev;
+  r.targetRIops   = num('rev-rIops');
+  r.targetWIops   = num('rev-wIops');
+  r.targetRMbps   = num('rev-rMbps');
+  r.targetWMbps   = num('rev-wMbps');
+  r.targetLatUs   = num('rev-lat');
+  r.volumes       = +el('rev-volumes').value || 10;
+  r.readPct       = +el('rev-readPct').value || 70;
+  r.blockSizeKb   = +el('rev-blockSize').value || 4;
+  r.networkGbps   = +el('rev-network').value || 10;
+  r.fixedNodes    = +el('rev-nodes').value || 0;
+  r.fixedDiskType = el('rev-diskType').value;
+}
+
+function calculateReverse(r) {
+  const p  = PATTERN[r.pattern];
+  const bf = BLOCK[r.blockSizeKb] || BLOCK[4];
+  const loc = LOCALITY_BOOST[r.locality] || 1.0;
+
+  const effTargetR = Math.max(
+    r.targetRIops || 0,
+    r.targetRMbps ? (r.targetRMbps * 1024 / r.blockSizeKb) : 0
+  );
+  const effTargetW = Math.max(
+    r.targetWIops || 0,
+    r.targetWMbps ? (r.targetWMbps * 1024 / r.blockSizeKb) : 0
+  );
+  if (effTargetR === 0 && effTargetW === 0) return { empty: true };
+
+  const rMult = (r.replicas === 3 ? p.rMult3 : r.replicas === 2 ? p.rMult2 : p.rMult1) * loc;
+  const wMult = r.replicas === 1 ? p.wMult1 : p.wMult;
+  const rCeilScale = rMult / p.rMult3;
+  const wCeilScale = r.replicas === 1 ? p.wMult1 / p.wMult : 1.0;
+
+  const minNodeIopsR = effTargetR > 0 ? effTargetR / (rMult * bf.iops) : 0;
+  const minNodeIopsW = effTargetW > 0 ? effTargetW / (wMult * bf.iops) : 0;
+  const minNodeIops  = Math.max(minNodeIopsR, minNodeIopsW);
+  const bindingConstraint = minNodeIopsR >= minNodeIopsW ? 'Read IOPS' : 'Write IOPS';
+
+  const minDINR = effTargetR > 0 ? effTargetR * r.volumes * 30000 / (p.rCeil * rCeilScale) : 0;
+  const minDINW = effTargetW > 0 ? effTargetW * r.volumes * 30000 / (p.wCeil * wCeilScale) : 0;
+  const minDiskIopsTimesNodes = Math.max(minDINR, minDINW);
+
+  const wTrafficMbps = effTargetW * r.volumes * (r.blockSizeKb / 1024) * r.replicas;
+  const minNetGbps   = wTrafficMbps > 0 ? Math.max(1, Math.ceil(wTrafficMbps / 125)) : 0;
+  const netWarning   = minNetGbps > r.networkGbps;
+
+  const diskTypes    = r.fixedDiskType === 'any' ? ['SSD', 'NVMe'] : [r.fixedDiskType];
+  const nodeCandidates = r.fixedNodes > 0 ? [r.fixedNodes] : [3, 5, 10, 20];
+
+  const options = [];
+  for (const diskType of diskTypes) {
+    const diskIops = DISK[diskType].iops;
+    const diskMbps = DISK[diskType].mbps;
+    for (const nodes of nodeCandidates) {
+      const dcPV   = Math.ceil(minNodeIops / diskIops);
+      const dcCeil = Math.ceil(minDiskIopsTimesNodes / (diskIops * nodes));
+      const diskCount = Math.max(dcPV, dcCeil, 1);
+      if (diskCount > 24) continue;
+
+      const fwd = calculate({
+        nodes, engine: 'V1', networkGbps: r.networkGbps,
+        diskType, diskIops, diskMbps, diskSizeGib: 1000, diskCount,
+        replicas: r.replicas, locality: r.locality, volumes: r.volumes,
+        volumeSizeGib: 100, overprovisioning: 200,
+        readPct: r.readPct, pattern: r.pattern, blockSizeKb: r.blockSizeKb,
+      });
+      const meetsR = effTargetR === 0 || fwd.volR >= effTargetR * 0.95;
+      const meetsW = effTargetW === 0 || fwd.volW >= effTargetW * 0.95;
+      if (!meetsR || !meetsW) continue;
+
+      const headroomR = effTargetR > 0 ? (fwd.volR - effTargetR) / effTargetR * 100 : null;
+      const headroomW = effTargetW > 0 ? (fwd.volW - effTargetW) / effTargetW * 100 : null;
+      const headroom  = Math.min(headroomR ?? Infinity, headroomW ?? Infinity);
+
+      const latBase = LAT_BASE_US * LAT_DISK[diskType] * LAT_ENGINE['V1'] * LAT_REPLICA[r.replicas];
+      const density  = (r.volumes / nodes) * 3;
+      const contention = 1 + Math.max(0, (density - 1) / 50) * 1.107;
+      const latUs    = latBase * contention;
+      const latWarning = r.targetLatUs && latUs > r.targetLatUs;
+
+      options.push({ diskType, nodes, diskCount, diskIops, diskMbps,
+        achievedR: fwd.volR, achievedW: fwd.volW, achievedRMbps: fwd.volRMbps, achievedWMbps: fwd.volWMbps,
+        headroom, latUs, latWarning, totalDisks: nodes * diskCount, fwd });
+    }
+  }
+
+  options.sort((a, b) => a.totalDisks - b.totalDisks || a.nodes - b.nodes);
+  const seen = new Set();
+  const deduped = options.filter(o => {
+    const k = o.diskType + ':' + o.nodes;
+    if (seen.has(k)) return false;
+    seen.add(k); return true;
+  });
+
+  let infeasible = null;
+  if (deduped.length === 0) {
+    const dt    = diskTypes[0];
+    const nodes = r.fixedNodes || 3;
+    const di    = DISK[dt].iops;
+    const diskCount = Math.max(Math.ceil(minNodeIops / di), Math.ceil(minDiskIopsTimesNodes / (di * nodes)), 1);
+    infeasible = { diskType: dt, nodes, diskCount };
+  }
+
+  return { options: deduped.slice(0, 3), bindingConstraint, minNodeIops, minNetGbps, netWarning,
+    effTargetR, effTargetW, infeasible, empty: false };
+}
+
+function renderReverse(res) {
+  const container = el('rev-results');
+  if (res.empty) {
+    container.innerHTML = '<div class="rev-empty">Enter at least one performance target above to see recommendations.</div>';
+    return;
+  }
+  const fmt   = v => v >= 10000 ? (v/1000).toFixed(1)+'k' : Math.round(v).toString();
+  const fmtUs = us => us >= 1000 ? (us/1000).toFixed(1)+' ms' : Math.round(us)+' µs';
+  let html = `<div class="hero-row">
+    <div class="hero-card"><div class="hero-label">Binding Constraint</div>
+      <div class="hero-val" style="font-size:1.1rem">${res.bindingConstraint}</div>
+      <div class="hero-sub">what drives hardware requirement</div></div>
+    <div class="hero-card"><div class="hero-label">Min Node IOPS</div>
+      <div class="hero-val">${fmt(res.minNodeIops)}</div>
+      <div class="hero-sub">per-node disk IOPS needed</div></div>
+    <div class="hero-card"><div class="hero-label">Min Network</div>
+      <div class="hero-val">${res.minNetGbps || '< 1'} Gbps</div>
+      <div class="hero-sub">write replication traffic${res.netWarning ? ' ⚠' : ''}</div></div>
+  </div>`;
+
+  if (res.infeasible) {
+    const inf = res.infeasible;
+    html += `<div class="metric-block"><div class="block-title" style="color:#e05252">Not Achievable — Config Exceeds Limits</div>
+      <p style="font-size:12px;color:var(--text-muted);margin:8px 0">
+        Minimum required: <strong>${inf.diskCount} ${inf.diskType} disks/node × ${inf.nodes} nodes</strong> (${inf.nodes * inf.diskCount} total disks).
+        Exceeds 24 disks/node limit. Try: reducing volume count, lowering targets, or switching to NVMe.
+      </p></div>`;
+  } else {
+    html += '<div class="rec-grid">';
+    res.options.forEach((opt, i) => {
+      const hClass = opt.headroom < 10 ? 'color:#f5a623' : 'color:var(--accent)';
+      html += `<div class="rec-card${i === 0 ? ' rec-card-first' : ''}">
+        <div class="rec-badges">
+          <span class="rec-badge-type">${opt.diskType}</span>
+          ${i === 0 ? '<span class="rec-badge-best">Recommended</span>' : ''}
+        </div>
+        <div class="rec-config">
+          <div class="rec-config-row"><span>Nodes</span><strong>${opt.nodes}</strong></div>
+          <div class="rec-config-row"><span>Disks / node</span><strong>${opt.diskCount}</strong></div>
+          <div class="rec-config-row"><span>Total disks</span><strong>${opt.totalDisks}</strong></div>
+          <div class="rec-config-row"><span>Disk IOPS</span><strong>${(opt.diskIops/1000).toFixed(0)}k</strong></div>
+        </div>
+        <div class="rec-perf">
+          ${res.effTargetR > 0 ? `<div class="rec-perf-row"><span>Read IOPS</span>
+            <span><strong>${fmt(opt.achievedR)}</strong> <span style="${hClass}">+${Math.round(opt.headroom)}%</span></span></div>` : ''}
+          ${res.effTargetW > 0 ? `<div class="rec-perf-row"><span>Write IOPS</span>
+            <span><strong>${fmt(opt.achievedW)}</strong></span></div>` : ''}
+          <div class="rec-perf-row"><span>Latency ~</span>
+            <span><strong>${fmtUs(opt.latUs)}</strong>${opt.latWarning ? ' <span style="color:#e05252">⚠ target missed</span>' : ''}</span></div>
+        </div>
+        <button class="rec-apply" onclick="applyRecommendation(${i})">Apply to Calculator →</button>
+      </div>`;
+    });
+    html += '</div>';
+  }
+
+  const warns = [];
+  if (res.netWarning) warns.push(`Write replication needs ${res.minNetGbps} Gbps — exceeds selected ${S.rev.networkGbps} Gbps.`);
+  if (S.rev.replicas === 1) warns.push('Replica count = 1 provides no data redundancy.');
+  if (warns.length) {
+    html += '<div class="metric-block"><div class="block-title">Warnings</div>';
+    warns.forEach(w => { html += `<div class="warn-item">&#9888; ${w}</div>`; });
+    html += '</div>';
+  }
+  container.innerHTML = html;
+}
+
+function setMode(m) {
+  S.mode = m;
+  const isFwd = m === 'forward';
+  el('fwd-inputs').style.display  = isFwd ? '' : 'none';
+  el('rev-inputs').style.display  = isFwd ? 'none' : '';
+  el('fwd-results').style.display = isFwd ? 'contents' : 'none';
+  el('rev-results').style.display = isFwd ? 'none' : '';
+  document.querySelectorAll('.mode-tab').forEach((t, i) => t.classList.toggle('active', (i === 0) === isFwd));
+  recalc();
+}
+
+function applyRecommendation(idx) {
+  gatherRevState();
+  const res = calculateReverse(S.rev);
+  if (!res.options || !res.options[idx]) return;
+  const opt = res.options[idx];
+  S.diskType    = opt.diskType;
+  S.diskIops    = opt.diskIops;
+  S.diskMbps    = opt.diskMbps;
+  S.diskCount   = opt.diskCount;
+  S.nodes       = opt.nodes;
+  S.replicas    = S.rev.replicas;
+  S.locality    = S.rev.locality;
+  S.volumes     = S.rev.volumes;
+  S.pattern     = S.rev.pattern;
+  S.blockSizeKb = S.rev.blockSizeKb;
+  S.readPct     = S.rev.readPct;
+  applyState();
+  setMode('forward');
+  toast('Configuration applied — see forward mode results');
+}
+
+function syncRevSlider(id) {
+  el(id + '-val').textContent = el(id).value;
+  recalc();
+}
+
+function syncRevReadPct() {
+  const v = +el('rev-readPct').value;
+  el('rev-readPct-lbl').textContent  = v + '% R';
+  el('rev-writePct-lbl').textContent = (100 - v) + '% W';
+  recalc();
+}
+
 function recalc() {
-  gatherState();
-  render(calculate(S));
+  if (S.mode === 'reverse') {
+    gatherRevState();
+    renderReverse(calculateReverse(S.rev));
+  } else {
+    gatherState();
+    render(calculate(S));
+  }
 }
 
 // ── UI helpers ──────────────────────────────────────────────────────────
@@ -1319,7 +1819,7 @@ function onDiskTypeChange() {
 
 // ── Export ──────────────────────────────────────────────────────────────
 function shareURL() {
-  gatherState();
+  if (S.mode === 'reverse') gatherRevState(); else gatherState();
   window.location.hash = btoa(JSON.stringify(S));
   navigator.clipboard.writeText(window.location.href)
     .then(() => toast('URL copied to clipboard'))
@@ -1327,13 +1827,51 @@ function shareURL() {
 }
 
 function exportJSON() {
-  gatherState();
-  const result = calculate(S);
-  dl('longhorn-sizing.json', JSON.stringify({ inputs: S, outputs: result }, null, 2), 'application/json');
+  if (S.mode === 'reverse') {
+    gatherRevState();
+    const result = calculateReverse(S.rev);
+    dl('longhorn-sizing.json', JSON.stringify({ mode: 'reverse', inputs: S.rev, outputs: result }, null, 2), 'application/json');
+  } else {
+    gatherState();
+    const result = calculate(S);
+    dl('longhorn-sizing.json', JSON.stringify({ inputs: S, outputs: result }, null, 2), 'application/json');
+  }
   toast('JSON exported');
 }
 
 function exportCSV() {
+  if (S.mode === 'reverse') {
+    gatherRevState();
+    const rv = S.rev;
+    const res = calculateReverse(rv);
+    const rows = [
+      ['Category','Parameter','Value','Unit'],
+      ['Target','Read IOPS/vol', rv.targetRIops || '', 'IOPS'],
+      ['Target','Write IOPS/vol', rv.targetWIops || '', 'IOPS'],
+      ['Target','Read MB/s/vol', rv.targetRMbps || '', 'MB/s'],
+      ['Target','Write MB/s/vol', rv.targetWMbps || '', 'MB/s'],
+      ['Target','Max Latency', rv.targetLatUs || '', 'µs'],
+      ['Workload','Volumes', rv.volumes, ''],
+      ['Workload','Replicas', rv.replicas, ''],
+      ['Workload','Pattern', rv.pattern, ''],
+      ['Workload','Block Size', rv.blockSizeKb, 'KB'],
+      ['Workload','Read Ratio', rv.readPct, '%'],
+      ['Solver','Binding Constraint', res.bindingConstraint || '', ''],
+      ['Solver','Min Node IOPS', Math.round(res.minNodeIops || 0), 'IOPS'],
+      ['Solver','Min Network', res.minNetGbps || 0, 'Gbps'],
+      ...(res.options || []).flatMap((o, i) => [
+        [`Option ${i+1}`,'Disk Type', o.diskType, ''],
+        [`Option ${i+1}`,'Nodes', o.nodes, ''],
+        [`Option ${i+1}`,'Disks/Node', o.diskCount, ''],
+        [`Option ${i+1}`,'Achieved R IOPS', Math.round(o.achievedR), 'IOPS'],
+        [`Option ${i+1}`,'Achieved W IOPS', Math.round(o.achievedW), 'IOPS'],
+      ]),
+    ];
+    const csv = rows.map(row => row.map(c => '"' + String(c).replace(/"/g, '""') + '"').join(',')).join('\n');
+    dl('longhorn-sizing-reverse.csv', csv, 'text/csv');
+    toast('CSV exported');
+    return;
+  }
   gatherState();
   const r = calculate(S);
   const rows = [
@@ -1419,6 +1957,25 @@ function applyState() {
   setBtnActive('engine-grp',  engIdx);
   setBtnActive('replica-grp', replicaIdx);
   setBtnActive('pattern-grp', patIdx);
+
+  // Restore reverse mode inputs
+  const rv = S.rev;
+  const setRevVal = (id, v) => { const e = el(id); if (e && v !== null && v !== undefined) e.value = v; };
+  setRevVal('rev-rIops',    rv.targetRIops);
+  setRevVal('rev-wIops',    rv.targetWIops);
+  setRevVal('rev-rMbps',    rv.targetRMbps);
+  setRevVal('rev-wMbps',    rv.targetWMbps);
+  setRevVal('rev-lat',      rv.targetLatUs);
+  setRevVal('rev-volumes',  rv.volumes);   el('rev-volumes-val').textContent = rv.volumes;
+  setRevVal('rev-nodes',    rv.fixedNodes);
+  setRevVal('rev-diskType', rv.fixedDiskType);
+  setRevVal('rev-network',  rv.networkGbps);
+  setRevVal('rev-blockSize', rv.blockSizeKb);
+  setRevVal('rev-readPct',  rv.readPct);
+  el('rev-readPct-lbl').textContent  = rv.readPct + '% R';
+  el('rev-writePct-lbl').textContent = (100 - rv.readPct) + '% W';
+  setBtnActive('rev-replica-grp', rv.replicas - 1);
+  setBtnActive('rev-pattern-grp', { random: 0, sequential: 1, mixed: 2 }[rv.pattern]);
 }
 
 function setBtnActive(groupId, idx) {
@@ -1429,7 +1986,14 @@ function setBtnActive(groupId, idx) {
 function loadHash() {
   const h = window.location.hash.slice(1);
   if (!h) return;
-  try { Object.assign(S, JSON.parse(atob(h))); applyState(); } catch (_) {}
+  try {
+    const saved = JSON.parse(atob(h));
+    if (saved.rev) S.rev = { ...DEFAULT.rev, ...saved.rev };
+    const { rev: _, ...rest } = saved;
+    Object.assign(S, rest);
+    applyState();
+    if (saved.mode) setMode(saved.mode);
+  } catch (_) {}
 }
 
 // ── Boot ────────────────────────────────────────────────────────────────
