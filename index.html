@@ -820,28 +820,10 @@
         </div>
 
         <div class="field">
-          <label>Volume count
-            <i class="tip" data-tip="Total Longhorn volumes in the cluster. Cluster IOPS is shared — more volumes = less IOPS per volume. Contention grows above ~17 volumes per node.">?</i>
+          <label>Overprovisioning %
+            <i class="tip" data-tip="200% = total provisioned volume sizes can sum to 2× effective storage (safe if volumes are not fully written). 100% = no overprovisioning. Longhorn default is 200%.">?</i>
           </label>
-          <div class="slider-row">
-            <input type="range" id="volumes" min="1" max="300" value="10" step="1" oninput="syncSlider('volumes', '')">
-            <span class="slider-val" id="volumes-val">10</span>
-          </div>
-        </div>
-
-        <div class="field-row">
-          <div class="field">
-            <label>Volume size (GiB)
-              <i class="tip" data-tip="Provisioned size of each volume. Used for total provisioned capacity vs available capacity check.">?</i>
-            </label>
-            <input type="number" id="volumeSizeGib" value="100" min="1" max="65536" onchange="recalc()">
-          </div>
-          <div class="field">
-            <label>Overprovisioning %
-              <i class="tip" data-tip="200% = volumes can sum to 2× effective storage (safe if volumes are not fully written). 100% = no overprovisioning. Longhorn default is 200%.">?</i>
-            </label>
-            <input type="number" id="overprovisioning" value="200" min="100" max="1000" onchange="recalc()">
-          </div>
+          <input type="number" id="overprovisioning" value="200" min="100" max="1000" onchange="recalc()">
         </div>
 
       </div>
@@ -909,21 +891,21 @@
           <p style="font-size:11px;color:var(--text-muted)">Fill in one or more targets. Leave blank to ignore that dimension.</p>
           <div class="field-row">
             <div class="field">
-              <label>Read IOPS / vol <i class="tip" data-tip="Target per-volume read IOPS. The solver finds the minimum hardware that meets or exceeds this.">?</i></label>
+              <label>Read IOPS (cluster) <i class="tip" data-tip="Target cluster-wide read IOPS. The solver finds the minimum hardware that meets or exceeds this.">?</i></label>
               <input type="number" id="rev-rIops" placeholder="e.g. 5000" min="0" oninput="recalc()">
             </div>
             <div class="field">
-              <label>Write IOPS / vol <i class="tip" data-tip="Target per-volume write IOPS. Writes are typically the most constraining dimension in Longhorn.">?</i></label>
+              <label>Write IOPS (cluster) <i class="tip" data-tip="Target cluster-wide write IOPS. Writes are typically the most constraining dimension in Longhorn.">?</i></label>
               <input type="number" id="rev-wIops" placeholder="e.g. 1000" min="0" oninput="recalc()">
             </div>
           </div>
           <div class="field-row">
             <div class="field">
-              <label>Read MB/s / vol <i class="tip" data-tip="Target read throughput. Converted to IOPS-equivalent at the selected block size, then takes the max with the IOPS target.">?</i></label>
+              <label>Read MB/s (cluster) <i class="tip" data-tip="Target cluster-wide read throughput. Converted to IOPS-equivalent at the selected block size, then takes the max with the IOPS target.">?</i></label>
               <input type="number" id="rev-rMbps" placeholder="e.g. 100" min="0" oninput="recalc()">
             </div>
             <div class="field">
-              <label>Write MB/s / vol <i class="tip" data-tip="Target write throughput. Converted to IOPS-equivalent at the selected block size.">?</i></label>
+              <label>Write MB/s (cluster) <i class="tip" data-tip="Target cluster-wide write throughput. Converted to IOPS-equivalent at the selected block size.">?</i></label>
               <input type="number" id="rev-wMbps" placeholder="e.g. 20" min="0" oninput="recalc()">
             </div>
           </div>
@@ -969,13 +951,6 @@
               <option value="256">256 KB</option>
               <option value="1024">1 MB — streaming</option>
             </select>
-          </div>
-          <div class="field">
-            <label>Volume count <i class="tip" data-tip="Total Longhorn volumes in the cluster. More volumes = cluster IOPS shared further, requiring proportionally higher hardware.">?</i></label>
-            <div class="slider-row">
-              <input type="range" id="rev-volumes" min="1" max="300" value="10" step="1" oninput="syncRevSlider('rev-volumes')">
-              <span class="slider-val" id="rev-volumes-val">10</span>
-            </div>
           </div>
           <div class="field">
             <label>Replica count <i class="tip" data-tip="More replicas = higher write overhead but better read distribution. Directly impacts required disk IOPS.">?</i></label>
@@ -1041,17 +1016,17 @@
     <!-- Hero row -->
     <div class="hero-row">
       <div class="hero-card">
-        <div class="hero-label">Effective IOPS / vol</div>
+        <div class="hero-label">Cluster IOPS</div>
         <div class="hero-val" id="h-iops">—</div>
         <div class="hero-sub">blended R/W mix</div>
       </div>
       <div class="hero-card">
-        <div class="hero-label">Effective MB/s / vol</div>
+        <div class="hero-label">Cluster MB/s</div>
         <div class="hero-val" id="h-mbps">—</div>
         <div class="hero-sub">blended R/W mix</div>
       </div>
       <div class="hero-card">
-        <div class="hero-label">Avg Latency / vol</div>
+        <div class="hero-label">Est. Latency</div>
         <div class="hero-val" id="h-lat">—</div>
         <div class="hero-sub">blended R/W mix</div>
       </div>
@@ -1059,79 +1034,22 @@
 
     <div class="metrics-grid">
 
-      <!-- Per-volume performance -->
+      <!-- Cluster performance -->
       <div class="metric-block">
-        <div class="block-title">Per-Volume Performance</div>
+        <div class="block-title">Performance</div>
 
         <div class="metric">
           <div class="metric-row">
             <span class="metric-name">Read IOPS</span>
-            <span><span class="metric-num" id="r-rIops">—</span><span class="metric-unit">IOPS</span></span>
+            <span><span class="metric-num" id="r-cRIops">—</span><span class="metric-unit">IOPS</span></span>
           </div>
-          <div class="gauge"><div class="gauge-bar g-green" id="g-rIops" style="width:0%"></div></div>
         </div>
 
         <div class="metric">
           <div class="metric-row">
             <span class="metric-name">Write IOPS</span>
-            <span><span class="metric-num" id="r-wIops">—</span><span class="metric-unit">IOPS</span></span>
-          </div>
-          <div class="gauge"><div class="gauge-bar g-green" id="g-wIops" style="width:0%"></div></div>
-        </div>
-
-        <div class="metric">
-          <div class="metric-row">
-            <span class="metric-name">Read MB/s</span>
-            <span><span class="metric-num" id="r-rMbps">—</span><span class="metric-unit">MB/s</span></span>
-          </div>
-          <div class="gauge"><div class="gauge-bar g-green" id="g-rMbps" style="width:0%"></div></div>
-        </div>
-
-        <div class="metric">
-          <div class="metric-row">
-            <span class="metric-name">Write MB/s</span>
-            <span><span class="metric-num" id="r-wMbps">—</span><span class="metric-unit">MB/s</span></span>
-          </div>
-          <div class="gauge"><div class="gauge-bar g-green" id="g-wMbps" style="width:0%"></div></div>
-        </div>
-
-        <div class="divider"></div>
-
-        <div class="metric">
-          <div class="metric-row">
-            <span class="metric-name">Read latency</span>
-            <span><span class="metric-num" id="r-rLat">—</span><span class="metric-unit" id="u-rLat">µs</span></span>
-          </div>
-        </div>
-
-        <div class="metric">
-          <div class="metric-row">
-            <span class="metric-name">Write latency</span>
-            <span><span class="metric-num" id="r-wLat">—</span><span class="metric-unit" id="u-wLat">µs</span></span>
-          </div>
-        </div>
-
-        <p class="sub-note">Gauge = % of cluster ceiling used</p>
-      </div>
-
-      <!-- Cluster totals -->
-      <div class="metric-block">
-        <div class="block-title">Cluster Totals</div>
-
-        <div class="metric">
-          <div class="metric-row">
-            <span class="metric-name">Total read IOPS</span>
-            <span><span class="metric-num" id="r-cRIops">—</span><span class="metric-unit">IOPS</span></span>
-          </div>
-          <div class="gauge"><div class="gauge-bar g-green" id="g-cRIops" style="width:0%"></div></div>
-        </div>
-
-        <div class="metric">
-          <div class="metric-row">
-            <span class="metric-name">Total write IOPS</span>
             <span><span class="metric-num" id="r-cWIops">—</span><span class="metric-unit">IOPS</span></span>
           </div>
-          <div class="gauge"><div class="gauge-bar g-green" id="g-cWIops" style="width:0%"></div></div>
         </div>
 
         <div class="metric">
@@ -1145,6 +1063,20 @@
           <div class="metric-row">
             <span class="metric-name">Write throughput</span>
             <span><span class="metric-num" id="r-cWMbps">—</span><span class="metric-unit">MB/s</span></span>
+          </div>
+        </div>
+
+        <div class="metric">
+          <div class="metric-row">
+            <span class="metric-name">Read latency</span>
+            <span><span class="metric-num" id="r-rLat">—</span><span class="metric-unit" id="u-rLat">µs</span></span>
+          </div>
+        </div>
+
+        <div class="metric">
+          <div class="metric-row">
+            <span class="metric-name">Write latency</span>
+            <span><span class="metric-num" id="r-wLat">—</span><span class="metric-unit" id="u-wLat">µs</span></span>
           </div>
         </div>
 
@@ -1189,16 +1121,6 @@
           </div>
         </div>
 
-        <div class="divider"></div>
-
-        <div class="metric">
-          <div class="metric-row">
-            <span class="metric-name">Volumes total provisioned</span>
-            <span><span class="metric-num" id="r-vTot">—</span><span class="metric-unit" id="u-vTot">TiB</span></span>
-          </div>
-          <div class="gauge"><div class="gauge-bar g-green" id="g-cap" style="width:0%"></div></div>
-        </div>
-
         <div class="metric">
           <div class="metric-row">
             <span class="metric-name">Storage efficiency</span>
@@ -1206,7 +1128,6 @@
           </div>
         </div>
 
-        <p class="sub-note">Gauge = provisioned ÷ provisionable</p>
       </div>
 
       <!-- Warnings -->
@@ -1250,11 +1171,11 @@ const DEFAULT = {
   mode: 'forward',
   nodes: 3, engine: 'V1', networkGbps: 10,
   diskType: 'SSD', diskIops: 10000, diskMbps: 360, diskSizeGib: 1000, diskCount: 1,
-  replicas: 3, locality: 'best-effort', volumes: 10, volumeSizeGib: 100, overprovisioning: 200,
+  replicas: 3, locality: 'best-effort', overprovisioning: 200,
   readPct: 70, pattern: 'random', blockSizeKb: 4,
   rev: {
     targetRIops: null, targetWIops: null, targetRMbps: null, targetWMbps: null, targetLatUs: null,
-    volumes: 10, replicas: 3, locality: 'best-effort', pattern: 'random', blockSizeKb: 4, readPct: 70,
+    replicas: 3, locality: 'best-effort', pattern: 'random', blockSizeKb: 4, readPct: 70,
     fixedNodes: 0, fixedDiskType: 'any', networkGbps: 10,
   },
 };
@@ -1348,56 +1269,36 @@ function calculate(s) {
   const effRCeil = Math.min(rIopsCeil, rBwAsIops);
   const effWCeil = Math.min(wIopsCeil, wBwAsIops);
 
-  // Unconstrained per-volume IOPS (single vol, no contention)
-  const rawRIopsVol = nodeIops * rMult * locBoost * bf.iops * engMult;
-  const rawWIopsVol = nodeIops * wMult              * bf.iops * engMult;
-
-  // Cluster-wide demand vs ceiling
-  const demandR = s.volumes * rawRIopsVol;
-  const demandW = s.volumes * rawWIopsVol;
-  const clusterR = Math.min(demandR, effRCeil);
-  const clusterW = Math.min(demandW, effWCeil);
-
-  // Per-volume (ceiling shared across volumes)
-  const volR = clusterR / s.volumes;
-  const volW = clusterW / s.volumes;
+  // Cluster-wide performance ceiling
+  const clusterR = effRCeil;
+  const clusterW = effWCeil;
 
   // Throughput
-  const volRMbps = (volR * s.blockSizeKb) / 1024;
-  const volWMbps = (volW * s.blockSizeKb) / 1024;
-  const cRMbps   = (clusterR * s.blockSizeKb) / 1024;
-  const cWMbps   = (clusterW * s.blockSizeKb) / 1024;
+  const cRMbps = (clusterR * s.blockSizeKb) / 1024;
+  const cWMbps = (clusterW * s.blockSizeKb) / 1024;
 
   // Network utilisation
   const netWriteLoad = cWMbps * s.replicas;
   const netReadLoad  = cRMbps * rNetFactor;
   const netUtil = (netWriteLoad + netReadLoad) / netMbps;
 
-  // Latency: calibrated base × disk × engine × replica scaling, then contention
+  // Latency: calibrated base × disk × engine × replica scaling
   const latBase = LAT_BASE_US * LAT_DISK[s.diskType] * LAT_ENGINE[s.engine] * LAT_REPLICA[s.replicas];
-  // Volume density relative to 3-node reference (contention grows above 1 vol/node × 3)
-  const density = (s.volumes / s.nodes) * 3;
-  // Benchmark: at density=51, lat ≈ 2.1× single-vol (743µs → 1581µs)
-  const contention = 1 + Math.max(0, (density - 1) / 50) * 1.107;
-  const rLatUs = latBase * contention;
+  const rLatUs = latBase;
   const wLatUs = rLatUs * 1.85; // writes are slower due to synchronous replication
 
   // Capacity
   const rawGib  = s.nodes * s.diskCount * s.diskSizeGib;
   const effGib  = rawGib / s.replicas;
   const provGib = effGib * (s.overprovisioning / 100);
-  const vTotGib = s.volumes * s.volumeSizeGib;
 
   // Utilisation ratios (for gauges)
-  const rIopsUtil = demandR > 0 ? clusterR / effRCeil : 0;
-  const wIopsUtil = demandW > 0 ? clusterW / effWCeil : 0;
-  const rBwUtil   = cRMbps / (nodeMbps * s.nodes);
-  const wBwUtil   = cWMbps / (nodeMbps * s.nodes);
-  const capUtil   = provGib > 0 ? vTotGib / provGib : 0;
+  const rBwUtil = cRMbps / (nodeMbps * s.nodes);
+  const wBwUtil = cWMbps / (nodeMbps * s.nodes);
 
   // Blended metrics
-  const blendIops = volR * rPct + volW * wPct;
-  const blendMbps = volRMbps * rPct + volWMbps * wPct;
+  const blendIops = clusterR * rPct + clusterW * wPct;
+  const blendMbps = cRMbps   * rPct + cWMbps   * wPct;
   const blendLat  = rLatUs * rPct + wLatUs * wPct;
 
   // Warnings
@@ -1406,26 +1307,18 @@ function calculate(s) {
     warns.push('HDD drives can cause instability during concurrent operations (replica rebuilds, backups). SSD or NVMe strongly recommended for production.');
   if (s.replicas === 1)
     warns.push('Single replica — no data redundancy. A disk failure will result in permanent data loss.');
-  if (rIopsUtil > 0.85)
-    warns.push('Read IOPS ceiling reached (' + pct(rIopsUtil) + '% used). Per-volume read IOPS is being throttled. Add nodes or reduce volume count.');
-  if (wIopsUtil > 0.85)
-    warns.push('Write IOPS ceiling reached (' + pct(wIopsUtil) + '% used). Per-volume write IOPS is being throttled. Add nodes, upgrade disks, or reduce volume count.');
   if (netUtil > 0.80)
     warns.push('Network at ' + pct(netUtil) + '% utilisation. Consider higher bandwidth, reducing replicas, or improving data locality to reduce cross-node traffic.');
-  if (density > 51)
-    warns.push('Volume density (' + Math.round(density) + ' per 3-node equivalent) is above the benchmark threshold of 51. Latency will increase significantly.');
   if (s.engine === 'V2' && s.diskType !== 'NVMe')
     warns.push('V2 engine is optimised for local NVMe. Performance gains will be minimal without NVMe disks.');
-  if (vTotGib > provGib)
-    warns.push('Total provisioned volume capacity (' + fmtGib(vTotGib) + ') exceeds provisionable storage (' + fmtGib(provGib) + '). Risk of out-of-space on writes.');
   if (s.locality === 'strict-local' && s.nodes < s.replicas)
     warns.push('Strict-local requires at least as many nodes as replicas. Scheduling may fail.');
 
   return {
-    volR, volW, volRMbps, volWMbps, rLatUs, wLatUs,
+    rLatUs, wLatUs,
     clusterR, clusterW, cRMbps, cWMbps, netUtil, netMbps,
-    rawGib, effGib, provGib, vTotGib, storEff: (1 / s.replicas) * 100,
-    rIopsUtil, wIopsUtil, rBwUtil, wBwUtil, capUtil,
+    rawGib, effGib, provGib, storEff: (1 / s.replicas) * 100,
+    rBwUtil, wBwUtil,
     effRCeil, effWCeil,
     blendIops, blendMbps, blendLat,
     warns,
@@ -1495,20 +1388,13 @@ function render(r) {
   setText('h-mbps', fmtMbps(r.blendMbps));
   setText('h-lat',  hl.v + ' ' + hl.u);
 
-  // Per-volume IOPS
-  setText('r-rIops', fmt(r.volR));    setGauge('g-rIops', r.rIopsUtil);
-  setText('r-wIops', fmt(r.volW));    setGauge('g-wIops', r.wIopsUtil);
-  setText('r-rMbps', fmtMbps(r.volRMbps)); setGauge('g-rMbps', r.rBwUtil);
-  setText('r-wMbps', fmtMbps(r.volWMbps)); setGauge('g-wMbps', r.wBwUtil);
-
-  const rl = fmtLat(r.rLatUs); setText('r-rLat', rl.v); setText('u-rLat', rl.u);
-  const wl = fmtLat(r.wLatUs); setText('r-wLat', wl.v); setText('u-wLat', wl.u);
-
-  // Cluster
-  setText('r-cRIops', fmt(r.clusterR));    setGauge('g-cRIops', r.rIopsUtil);
-  setText('r-cWIops', fmt(r.clusterW));    setGauge('g-cWIops', r.wIopsUtil);
+  // Performance
+  setText('r-cRIops', fmt(r.clusterR));
+  setText('r-cWIops', fmt(r.clusterW));
   setText('r-cRMbps', fmtMbps(r.cRMbps));
   setText('r-cWMbps', fmtMbps(r.cWMbps));
+  const rl = fmtLat(r.rLatUs); setText('r-rLat', rl.v); setText('u-rLat', rl.u);
+  const wl = fmtLat(r.wLatUs); setText('r-wLat', wl.v); setText('u-wLat', wl.u);
   setText('r-net',    pct(r.netUtil));      setGauge('g-net', r.netUtil);
   setText('r-rCeil',  fmt(r.effRCeil));
   setText('r-wCeil',  fmt(r.effWCeil));
@@ -1517,9 +1403,7 @@ function render(r) {
   setStorage('r-raw',  'u-raw',  r.rawGib);
   setStorage('r-eff',  'u-eff',  r.effGib);
   setStorage('r-prov', 'u-prov', r.provGib);
-  setStorage('r-vTot', 'u-vTot', r.vTotGib);
   setText('r-seff', Math.round(r.storEff));
-  setGauge('g-cap', r.capUtil);
 
   // Warnings
   const wEl = el('warn-list');
@@ -1542,8 +1426,6 @@ function gatherState() {
   S.diskSizeGib    = +el('diskSizeGib').value;
   S.diskCount      = +el('diskCount').value;
   S.locality       = el('locality').value;
-  S.volumes        = +el('volumes').value;
-  S.volumeSizeGib  = +el('volumeSizeGib').value;
   S.overprovisioning = +el('overprovisioning').value;
   S.readPct        = +el('readPct').value;
   S.blockSizeKb    = +el('blockSize').value;
@@ -1559,7 +1441,6 @@ function gatherRevState() {
   r.targetRMbps   = num('rev-rMbps');
   r.targetWMbps   = num('rev-wMbps');
   r.targetLatUs   = num('rev-lat');
-  r.volumes       = +el('rev-volumes').value || 10;
   r.readPct       = +el('rev-readPct').value || 70;
   r.blockSizeKb   = +el('rev-blockSize').value || 4;
   r.networkGbps   = +el('rev-network').value || 10;
@@ -1592,11 +1473,11 @@ function calculateReverse(r) {
   const minNodeIops  = Math.max(minNodeIopsR, minNodeIopsW);
   const bindingConstraint = minNodeIopsR >= minNodeIopsW ? 'Read IOPS' : 'Write IOPS';
 
-  const minDINR = effTargetR > 0 ? effTargetR * r.volumes * 30000 / (p.rCeil * rCeilScale) : 0;
-  const minDINW = effTargetW > 0 ? effTargetW * r.volumes * 30000 / (p.wCeil * wCeilScale) : 0;
+  const minDINR = effTargetR > 0 ? effTargetR * 30000 / (p.rCeil * rCeilScale) : 0;
+  const minDINW = effTargetW > 0 ? effTargetW * 30000 / (p.wCeil * wCeilScale) : 0;
   const minDiskIopsTimesNodes = Math.max(minDINR, minDINW);
 
-  const wTrafficMbps = effTargetW * r.volumes * (r.blockSizeKb / 1024) * r.replicas;
+  const wTrafficMbps = effTargetW * (r.blockSizeKb / 1024) * r.replicas;
   const minNetGbps   = wTrafficMbps > 0 ? Math.max(1, Math.ceil(wTrafficMbps / 125)) : 0;
   const netWarning   = minNetGbps > r.networkGbps;
 
@@ -1616,26 +1497,22 @@ function calculateReverse(r) {
       const fwd = calculate({
         nodes, engine: 'V1', networkGbps: r.networkGbps,
         diskType, diskIops, diskMbps, diskSizeGib: 1000, diskCount,
-        replicas: r.replicas, locality: r.locality, volumes: r.volumes,
-        volumeSizeGib: 100, overprovisioning: 200,
+        replicas: r.replicas, locality: r.locality, overprovisioning: 200,
         readPct: r.readPct, pattern: r.pattern, blockSizeKb: r.blockSizeKb,
       });
-      const meetsR = effTargetR === 0 || fwd.volR >= effTargetR * 0.95;
-      const meetsW = effTargetW === 0 || fwd.volW >= effTargetW * 0.95;
+      const meetsR = effTargetR === 0 || fwd.clusterR >= effTargetR * 0.95;
+      const meetsW = effTargetW === 0 || fwd.clusterW >= effTargetW * 0.95;
       if (!meetsR || !meetsW) continue;
 
-      const headroomR = effTargetR > 0 ? (fwd.volR - effTargetR) / effTargetR * 100 : null;
-      const headroomW = effTargetW > 0 ? (fwd.volW - effTargetW) / effTargetW * 100 : null;
+      const headroomR = effTargetR > 0 ? (fwd.clusterR - effTargetR) / effTargetR * 100 : null;
+      const headroomW = effTargetW > 0 ? (fwd.clusterW - effTargetW) / effTargetW * 100 : null;
       const headroom  = Math.min(headroomR ?? Infinity, headroomW ?? Infinity);
 
-      const latBase = LAT_BASE_US * LAT_DISK[diskType] * LAT_ENGINE['V1'] * LAT_REPLICA[r.replicas];
-      const density  = (r.volumes / nodes) * 3;
-      const contention = 1 + Math.max(0, (density - 1) / 50) * 1.107;
-      const latUs    = latBase * contention;
+      const latUs = LAT_BASE_US * LAT_DISK[diskType] * LAT_ENGINE['V1'] * LAT_REPLICA[r.replicas];
       const latWarning = r.targetLatUs && latUs > r.targetLatUs;
 
       options.push({ diskType, nodes, diskCount, diskIops, diskMbps,
-        achievedR: fwd.volR, achievedW: fwd.volW, achievedRMbps: fwd.volRMbps, achievedWMbps: fwd.volWMbps,
+        achievedR: fwd.clusterR, achievedW: fwd.clusterW, achievedRMbps: fwd.cRMbps, achievedWMbps: fwd.cWMbps,
         headroom, latUs, latWarning, totalDisks: nodes * diskCount, fwd });
     }
   }
@@ -1686,7 +1563,7 @@ function renderReverse(res) {
     html += `<div class="metric-block"><div class="block-title" style="color:#e05252">Not Achievable — Config Exceeds Limits</div>
       <p style="font-size:12px;color:var(--text-muted);margin:8px 0">
         Minimum required: <strong>${inf.diskCount} ${inf.diskType} disks/node × ${inf.nodes} nodes</strong> (${inf.nodes * inf.diskCount} total disks).
-        Exceeds 24 disks/node limit. Try: reducing volume count, lowering targets, or switching to NVMe.
+        Exceeds 24 disks/node limit. Try: lowering targets or switching to NVMe.
       </p></div>`;
   } else {
     html += '<div class="rec-grid">';
@@ -1751,7 +1628,6 @@ function applyRecommendation(idx) {
   S.nodes       = opt.nodes;
   S.replicas    = S.rev.replicas;
   S.locality    = S.rev.locality;
-  S.volumes     = S.rev.volumes;
   S.pattern     = S.rev.pattern;
   S.blockSizeKb = S.rev.blockSizeKb;
   S.readPct     = S.rev.readPct;
@@ -1846,12 +1722,11 @@ function exportCSV() {
     const res = calculateReverse(rv);
     const rows = [
       ['Category','Parameter','Value','Unit'],
-      ['Target','Read IOPS/vol', rv.targetRIops || '', 'IOPS'],
-      ['Target','Write IOPS/vol', rv.targetWIops || '', 'IOPS'],
-      ['Target','Read MB/s/vol', rv.targetRMbps || '', 'MB/s'],
-      ['Target','Write MB/s/vol', rv.targetWMbps || '', 'MB/s'],
+      ['Target','Read IOPS (cluster)', rv.targetRIops || '', 'IOPS'],
+      ['Target','Write IOPS (cluster)', rv.targetWIops || '', 'IOPS'],
+      ['Target','Read MB/s (cluster)', rv.targetRMbps || '', 'MB/s'],
+      ['Target','Write MB/s (cluster)', rv.targetWMbps || '', 'MB/s'],
       ['Target','Max Latency', rv.targetLatUs || '', 'µs'],
-      ['Workload','Volumes', rv.volumes, ''],
       ['Workload','Replicas', rv.replicas, ''],
       ['Workload','Pattern', rv.pattern, ''],
       ['Workload','Block Size', rv.blockSizeKb, 'KB'],
@@ -1886,29 +1761,22 @@ function exportCSV() {
     ['Input', 'Disks / Node', S.diskCount, ''],
     ['Input', 'Replicas', S.replicas, ''],
     ['Input', 'Data Locality', S.locality, ''],
-    ['Input', 'Volume Count', S.volumes, ''],
-    ['Input', 'Volume Size', S.volumeSizeGib, 'GiB'],
     ['Input', 'Overprovisioning', S.overprovisioning, '%'],
     ['Input', 'Read Ratio', S.readPct, '%'],
     ['Input', 'Pattern', S.pattern, ''],
     ['Input', 'Block Size', S.blockSizeKb, 'KB'],
-    ['Output', 'Read IOPS / vol',    Math.round(r.volR),      'IOPS'],
-    ['Output', 'Write IOPS / vol',   Math.round(r.volW),      'IOPS'],
-    ['Output', 'Read MB/s / vol',    r.volRMbps.toFixed(2),   'MB/s'],
-    ['Output', 'Write MB/s / vol',   r.volWMbps.toFixed(2),   'MB/s'],
+    ['Output', 'Read IOPS',          Math.round(r.clusterR),  'IOPS'],
+    ['Output', 'Write IOPS',         Math.round(r.clusterW),  'IOPS'],
+    ['Output', 'Read MB/s',          r.cRMbps.toFixed(2),     'MB/s'],
+    ['Output', 'Write MB/s',         r.cWMbps.toFixed(2),     'MB/s'],
     ['Output', 'Read Latency',       Math.round(r.rLatUs),    'µs'],
     ['Output', 'Write Latency',      Math.round(r.wLatUs),    'µs'],
-    ['Output', 'Cluster Read IOPS',  Math.round(r.clusterR),  'IOPS'],
-    ['Output', 'Cluster Write IOPS', Math.round(r.clusterW),  'IOPS'],
-    ['Output', 'Cluster Read MB/s',  r.cRMbps.toFixed(2),     'MB/s'],
-    ['Output', 'Cluster Write MB/s', r.cWMbps.toFixed(2),     'MB/s'],
     ['Output', 'Network Util',       pct(r.netUtil),          '%'],
     ['Output', 'Read IOPS Ceiling',  Math.round(r.effRCeil),  'IOPS'],
     ['Output', 'Write IOPS Ceiling', Math.round(r.effWCeil),  'IOPS'],
     ['Output', 'Raw Storage',        r.rawGib.toFixed(1),     'GiB'],
     ['Output', 'Effective Storage',  r.effGib.toFixed(1),     'GiB'],
     ['Output', 'Provisionable',      r.provGib.toFixed(1),    'GiB'],
-    ['Output', 'Vol Total Prov.',    r.vTotGib.toFixed(1),    'GiB'],
   ];
   const csv = rows.map(row => row.map(c => '"' + String(c).replace(/"/g, '""') + '"').join(',')).join('\n');
   dl('longhorn-sizing.csv', csv, 'text/csv');
@@ -1943,8 +1811,6 @@ function applyState() {
   setVal('diskSizeGib',    S.diskSizeGib);
   setVal('diskCount',      S.diskCount);  el('diskCount-val').textContent = S.diskCount;
   setVal('locality',       S.locality);
-  setVal('volumes',        S.volumes);    el('volumes-val').textContent = S.volumes;
-  setVal('volumeSizeGib',  S.volumeSizeGib);
   setVal('overprovisioning', S.overprovisioning);
   setVal('readPct',        S.readPct);
   el('readPct-lbl').textContent  = S.readPct + '% R';
@@ -1966,7 +1832,6 @@ function applyState() {
   setRevVal('rev-rMbps',    rv.targetRMbps);
   setRevVal('rev-wMbps',    rv.targetWMbps);
   setRevVal('rev-lat',      rv.targetLatUs);
-  setRevVal('rev-volumes',  rv.volumes);   el('rev-volumes-val').textContent = rv.volumes;
   setRevVal('rev-nodes',    rv.fixedNodes);
   setRevVal('rev-diskType', rv.fixedDiskType);
   setRevVal('rev-network',  rv.networkGbps);
